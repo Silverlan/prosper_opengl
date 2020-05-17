@@ -107,6 +107,7 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/*.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/third_party_libs/glad/src/glad.c"
 )
 add_library(${PROJ_NAME} ${LIB_TYPE} ${SRC_FILES})
 if(WIN32)

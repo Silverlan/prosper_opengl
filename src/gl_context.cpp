@@ -12,6 +12,7 @@
 #include "gl_descriptor_set_group.hpp"
 #include "gl_fence.hpp"
 #include "gl_event.hpp"
+#include "gl_api.hpp"
 #include <buffers/prosper_buffer_create_info.hpp>
 
 using namespace prosper;

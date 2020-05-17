@@ -6,9 +6,6 @@
 #define __PROSPER_OPENGL_DEFINITIONS_HPP__
 
 #include <prosper_definitions.hpp>
-//#include <gl/GL.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #ifdef SHPROSPER_OPENGL_STATIC
 #define DLLPROSPER_GL
@@ -25,5 +22,11 @@
 #define DLLPROSPER_GL __declspec(dllimport)
 #endif
 #endif
+
+// Note: These have to match the definitions of the OpenGL headers
+using GLuint = unsigned int;
+#define GL_INVALID_VALUE 0x0501
+struct __GLsync;
+using GLsync = __GLsync*;
 
 #endif

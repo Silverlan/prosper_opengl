@@ -5,6 +5,7 @@
 #include "image/gl_sampler.hpp"
 #include "gl_util.hpp"
 #include "gl_context.hpp"
+#include "gl_api.hpp"
 
 using namespace prosper;
 

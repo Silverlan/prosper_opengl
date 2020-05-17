@@ -10,6 +10,7 @@
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
 #include <shader/prosper_pipeline_create_info.hpp>
+#include "gl_api.hpp"
 
 using namespace prosper;
 
