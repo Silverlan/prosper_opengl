@@ -13,10 +13,9 @@ namespace prosper
 {
 	class GLContext;
 	class DLLPROSPER_GL GLCommandBuffer
-		: public prosper::ICommandBuffer
+		: virtual public prosper::ICommandBuffer
 	{
 	public:
-		static std::shared_ptr<ICommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
 		virtual ~GLCommandBuffer() override;
 
 		virtual bool Reset(bool shouldReleaseResources) const override;
@@ -26,7 +25,7 @@ namespace prosper
 		virtual bool RecordBindVertexBuffers(const prosper::ShaderGraphics &shader,const std::vector<IBuffer*> &buffers,uint32_t startBinding=0u,const std::vector<DeviceSize> &offsets={}) override;
 		virtual bool RecordDispatchIndirect(prosper::IBuffer &buffer,DeviceSize size) override;
 		virtual bool RecordDraw(uint32_t vertCount,uint32_t instanceCount=1,uint32_t firstVertex=0,uint32_t firstInstance=0) override;
-		virtual bool RecordDrawIndexed(uint32_t indexCount,uint32_t instanceCount=1,uint32_t firstIndex=0,int32_t vertexOffset=0,uint32_t firstInstance=0) override;
+		virtual bool RecordDrawIndexed(uint32_t indexCount,uint32_t instanceCount=1,uint32_t firstIndex=0,uint32_t firstInstance=0) override;
 		virtual bool RecordDrawIndexedIndirect(IBuffer &buf,DeviceSize offset,uint32_t drawCount,uint32_t stride) override;
 		virtual bool RecordDrawIndirect(IBuffer &buf,DeviceSize offset,uint32_t count,uint32_t stride) override;
 		virtual bool RecordFillBuffer(IBuffer &buf,DeviceSize offset,DeviceSize size,uint32_t data) override;
@@ -38,6 +37,7 @@ namespace prosper
 		virtual bool RecordSetStencilReference(StencilFaceFlags faceMask,uint32_t stencilReference) override;
 		virtual bool RecordSetStencilWriteMask(StencilFaceFlags faceMask,uint32_t stencilWriteMask) override;
 
+		virtual bool RecordPipelineBarrier(const util::PipelineBarrierInfo &barrierInfo) override;
 		virtual bool RecordSetDepthBias(float depthBiasConstantFactor=0.f,float depthBiasClamp=0.f,float depthBiasSlopeFactor=0.f) override;
 		virtual bool RecordClearImage(IImage &img,ImageLayout layout,const std::array<float,4> &clearColor,const util::ClearImageInfo &clearImageInfo={}) override;
 		virtual bool RecordClearImage(IImage &img,ImageLayout layout,float clearDepth,const util::ClearImageInfo &clearImageInfo={}) override;
@@ -48,21 +48,40 @@ namespace prosper
 
 		virtual bool RecordBindDescriptorSets(PipelineBindPoint bindPoint,prosper::Shader &shader,PipelineID pipelineId,uint32_t firstSet,const std::vector<prosper::IDescriptorSet*> &descSets,const std::vector<uint32_t> dynamicOffsets={}) override;
 		virtual bool RecordPushConstants(prosper::Shader &shader,PipelineID pipelineId,ShaderStageFlags stageFlags,uint32_t offset,uint32_t size,const void *data) override;
-		virtual bool RecordBindPipeline(PipelineBindPoint in_pipeline_bind_point,PipelineID in_pipeline_id) override;
+		std::optional<PipelineID> GetBoundPipelineId() const;
+		prosper::Shader *GetBoundShader() const;
 
 		virtual bool RecordSetLineWidth(float lineWidth) override;
 		virtual bool RecordSetViewport(uint32_t width,uint32_t height,uint32_t x=0u,uint32_t y=0u,float minDepth=0.f,float maxDepth=0.f) override;
 		virtual bool RecordSetScissor(uint32_t width,uint32_t height,uint32_t x=0u,uint32_t y=0u) override;
 
+		virtual bool RecordBeginPipelineStatisticsQuery(const PipelineStatisticsQuery &query) const override;
+		virtual bool RecordEndPipelineStatisticsQuery(const PipelineStatisticsQuery &query) const override;
+		virtual bool RecordBeginOcclusionQuery(const OcclusionQuery &query) const override;
+		virtual bool RecordEndOcclusionQuery(const OcclusionQuery &query) const override;
+		virtual bool WriteTimestampQuery(const TimestampQuery &query) const override;
+		virtual bool ResetQuery(const Query &query) const override;
+
 		GLContext &GetContext() const;
 	protected:
 		GLCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual void ClearBoundPipeline() override;
+		virtual bool DoRecordBindShaderPipeline(prosper::Shader &shader,PipelineID shaderPipelineId,PipelineID pipelineId) override;
 		virtual bool DoRecordCopyBuffer(const util::BufferCopy &copyInfo,IBuffer &bufferSrc,IBuffer &bufferDst) override;
 		virtual bool DoRecordCopyImage(const util::CopyInfo &copyInfo,IImage &imgSrc,IImage &imgDst,uint32_t w,uint32_t h) override;
 		virtual bool DoRecordCopyBufferToImage(const util::BufferImageCopyInfo &copyInfo,IBuffer &bufferSrc,IImage &imgDst,uint32_t w,uint32_t h) override;
 		virtual bool DoRecordCopyImageToBuffer(const util::BufferImageCopyInfo &copyInfo,IImage &imgSrc,ImageLayout srcImageLayout,IBuffer &bufferDst,uint32_t w,uint32_t h) override;
 		virtual bool DoRecordBlitImage(const util::BlitInfo &blitInfo,IImage &imgSrc,IImage &imgDst,const std::array<Offset3D,2> &srcOffsets,const std::array<Offset3D,2> &dstOffsets) override;
 		virtual bool DoRecordResolveImage(IImage &imgSrc,IImage &imgDst,const util::ImageResolve &resolve) override;
+
+		struct BoundPipelineData
+		{
+			std::optional<PipelineID> pipelineId {};
+			mutable ::util::WeakHandle<prosper::Shader> shader {};
+			std::optional<PipelineID> shaderPipelineId {};
+			std::unordered_map<uint32_t,uint32_t> shaderActiveTexturePerLocation {};
+			uint32_t nextActiveTextureIndex = 0;
+		} m_boundPipelineData {};
 	};
 
 	class DLLPROSPER_GL GLPrimaryCommandBuffer
@@ -70,6 +89,9 @@ namespace prosper
 		public IPrimaryCommandBuffer
 	{
 	public:
+		static std::shared_ptr<GLPrimaryCommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual bool IsPrimary() const override;
+
 		// If no render pass is specified, the render target's render pass will be used
 		virtual bool StartRecording(bool oneTimeSubmit=true,bool simultaneousUseAllowed=false) const override;
 		virtual bool RecordEndRenderPass() override;
@@ -85,6 +107,9 @@ namespace prosper
 		: public GLCommandBuffer,
 		public ISecondaryCommandBuffer
 	{
+	public:
+		static std::shared_ptr<GLSecondaryCommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual bool IsSecondary() const override;
 	protected:
 		GLSecondaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
 	};

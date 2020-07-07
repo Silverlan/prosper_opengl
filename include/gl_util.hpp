@@ -8,13 +8,19 @@
 #include <prosper_opengl_definitions.hpp>
 #include <prosper_enums.hpp>
 
+typedef unsigned int GLenum;
 namespace prosper
 {
 	namespace util
 	{
-		DLLPROSPER_GL GLuint to_opengl_enum(prosper::Filter filter);
-		DLLPROSPER_GL GLuint to_opengl_enum(prosper::SamplerAddressMode addressMode);
-		DLLPROSPER_GL GLuint to_opengl_enum(prosper::CompareOp compareOp);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::Filter filter);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::SamplerAddressMode addressMode);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::CompareOp compareOp);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::PrimitiveTopology primitiveTopology);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendOp blendOp);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendFactor blendFactor);
+		DLLPROSPER_GL uint32_t get_layout_location(uint32_t setIdx,uint32_t bindingIdx);
+		DLLPROSPER_GL GLenum to_opengl_image_format(prosper::Format format);
 	};
 };
 

@@ -11,6 +11,8 @@
 
 namespace prosper
 {
+	class GLContext;
+	class GLFramebuffer;
 	class DLLPROSPER_GL GLImage
 		: public prosper::IImage
 	{
@@ -22,10 +24,14 @@ namespace prosper
 		virtual DeviceSize GetAlignment() const override;
 		virtual bool Map(DeviceSize offset,DeviceSize size,void **outPtr=nullptr) override;
 		GLuint GetGLImage() const {return m_image;}
+		std::shared_ptr<GLFramebuffer> GetOrCreateFramebuffer(uint32_t baseLayerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount);
 	private:
-		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo);
+		friend GLContext;
+		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo,GLuint texture);
 		virtual bool DoSetMemoryBuffer(IBuffer &buffer) override;
 		GLuint m_image = GL_INVALID_VALUE;
+
+		std::vector<std::shared_ptr<GLFramebuffer>> m_framebuffers;
 	};
 };
 

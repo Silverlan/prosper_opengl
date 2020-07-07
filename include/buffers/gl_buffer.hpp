@@ -17,10 +17,14 @@
 
 namespace prosper
 {
+	class GLDynamicResizableBuffer;
+	class GLUniformResizableBuffer;
 	class DLLPROSPER_GL GLBuffer
-		: public prosper::IBuffer
+		: virtual public prosper::IBuffer
 	{
 	public:
+		friend GLDynamicResizableBuffer;
+		friend GLUniformResizableBuffer;
 		static std::shared_ptr<IBuffer> Create(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx);
 
 		virtual ~GLBuffer() override;
@@ -30,7 +34,7 @@ namespace prosper
 		GLBuffer(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,DeviceSize size,GLuint bufIdx);
 		virtual bool DoWrite(Offset offset,Size size,const void *data) const override;
 		virtual bool DoRead(Offset offset,Size size,void *data) const override;
-		virtual bool DoMap(Offset offset,Size size) const override;
+		virtual bool DoMap(Offset offset,Size size,MapFlags mapFlags) const override;
 		virtual bool DoUnmap() const override;
 
 		GLuint m_buffer = GL_INVALID_VALUE;

@@ -11,6 +11,7 @@
 
 namespace prosper
 {
+	class GLContext;
 	class DLLPROSPER_GL GLFramebuffer
 		: public prosper::IFramebuffer
 	{
@@ -19,6 +20,7 @@ namespace prosper
 			IPrContext &context,const std::vector<std::shared_ptr<IImageView>> &attachments,
 			uint32_t width,uint32_t height,uint32_t depth,uint32_t layers
 		);
+		friend GLContext;
 
 		virtual ~GLFramebuffer() override;
 		GLuint GetGLFramebuffer() const {return m_framebuffer;}
