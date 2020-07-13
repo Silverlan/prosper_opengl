@@ -32,12 +32,14 @@ namespace prosper
 		GLuint GetGLBuffer() const {return m_buffer;}
 	private:
 		GLBuffer(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,DeviceSize size,GLuint bufIdx);
+		bool ValidateBufferRange(DeviceSize offset,DeviceSize size) const;
 		virtual bool DoWrite(Offset offset,Size size,const void *data) const override;
 		virtual bool DoRead(Offset offset,Size size,void *data) const override;
-		virtual bool DoMap(Offset offset,Size size,MapFlags mapFlags) const override;
+		virtual bool DoMap(Offset offset,Size size,MapFlags mapFlags,void **optOutMappedPtr) const override;
 		virtual bool DoUnmap() const override;
 
 		GLuint m_buffer = GL_INVALID_VALUE;
+		mutable DeviceSize m_mappedOffset = 0;
 		mutable void *m_mappedPtr = nullptr;
 	};
 };

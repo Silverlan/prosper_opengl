@@ -4,12 +4,12 @@
 
 #include "shader/gl_shader_clear.hpp"
 #include "shader/prosper_pipeline_create_info.hpp"
-#include <prosper_util_square_shape.hpp>
+#include <prosper_context.hpp>
 
 using namespace prosper;
 
 decltype(ShaderClear::VERTEX_BINDING_VERTEX) ShaderClear::VERTEX_BINDING_VERTEX = {prosper::VertexInputRate::Vertex};
-decltype(ShaderClear::VERTEX_ATTRIBUTE_POSITION) ShaderClear::VERTEX_ATTRIBUTE_POSITION = {VERTEX_BINDING_VERTEX,prosper::util::get_square_vertex_format()};
+decltype(ShaderClear::VERTEX_ATTRIBUTE_POSITION) ShaderClear::VERTEX_ATTRIBUTE_POSITION = {VERTEX_BINDING_VERTEX,CommonBufferCache::GetSquareVertexFormat()};
 
 ShaderClear::ShaderClear(prosper::IPrContext &context,const std::string &identifier)
 	: ShaderGraphics(context,identifier,"screen/vs_screen","screen/fs_clear")
@@ -25,10 +25,10 @@ void ShaderClear::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pip
 
 bool ShaderClear::Draw()
 {
-	auto vertBuffer = prosper::util::get_square_vertex_buffer(GetContext());
+	auto vertBuffer = GetContext().GetCommonBufferCache().GetSquareVertexBuffer();
 	if(
 		RecordBindVertexBuffers({vertBuffer.get()}) == false ||
-		RecordDraw(prosper::util::get_square_vertex_count()) == false
+		RecordDraw(GetContext().GetCommonBufferCache().GetSquareVertexCount()) == false
 		)
 		return false;
 	return true;

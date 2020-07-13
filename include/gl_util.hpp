@@ -19,8 +19,8 @@ namespace prosper
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::PrimitiveTopology primitiveTopology);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendOp blendOp);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendFactor blendFactor);
-		DLLPROSPER_GL uint32_t get_layout_location(uint32_t setIdx,uint32_t bindingIdx);
-		DLLPROSPER_GL GLenum to_opengl_image_format(prosper::Format format);
+		DLLPROSPER_GL GLenum to_opengl_enum(prosper::IndexType indexType);
+		DLLPROSPER_GL GLenum to_opengl_image_format(prosper::Format format,GLenum *optOutPixelDataFormat=nullptr);
 	};
 };
 

@@ -8,7 +8,7 @@
 #include "gl_api.hpp"
 
 using namespace prosper;
-
+#pragma optimize("",off)
 std::shared_ptr<ISampler> GLSampler::Create(IPrContext &context,const prosper::util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler)
 {
 	return std::shared_ptr<GLSampler>{new GLSampler{context,samplerCreateInfo,sampler}};
@@ -16,12 +16,16 @@ std::shared_ptr<ISampler> GLSampler::Create(IPrContext &context,const prosper::u
 
 GLSampler::GLSampler(IPrContext &context,const prosper::util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler)
 	: ISampler{context,samplerCreateInfo},m_sampler{sampler}
-{}
+{
+	Update();
+}
 
 GLSampler::~GLSampler()
 {
 	glDeleteSamplers(1,&m_sampler);
 }
+
+GLuint GLSampler::GetGLSampler() const {return m_sampler;}
 
 bool GLSampler::DoUpdate()
 {
@@ -77,7 +81,7 @@ bool GLSampler::DoUpdate()
 	glSamplerParameterf(m_sampler,GL_TEXTURE_MAX_LOD,maxLod);
 
 	glSamplerParameteri(m_sampler,GL_TEXTURE_COMPARE_MODE,m_createInfo.compareEnable ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE);
-	glSamplerParameteri(m_sampler,GL_TEXTURE_COMPARE_FUNC,m_createInfo.compareEnable ? util::to_opengl_enum(m_createInfo.compareOp) : GL_NONE);
+	glSamplerParameteri(m_sampler,GL_TEXTURE_COMPARE_FUNC,m_createInfo.compareEnable ? util::to_opengl_enum(m_createInfo.compareOp) : GL_NEVER);
 
 	glSamplerParameterf(m_sampler,GL_TEXTURE_LOD_BIAS,m_createInfo.mipLodBias);
 
@@ -124,3 +128,4 @@ bool GLSampler::DoUpdate()
 	glSamplerParameterf(m_sampler,GL_TEXTURE_MAX_ANISOTROPY,m_createInfo.maxAnisotropy);
 	return static_cast<GLContext&>(GetContext()).CheckResult();
 }
+#pragma optimize("",on)

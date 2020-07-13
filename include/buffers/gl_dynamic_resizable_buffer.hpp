@@ -20,6 +20,8 @@ namespace prosper
 		GLDynamicResizableBuffer(
 			IPrContext &context,IBuffer &buffer,const util::BufferCreateInfo &createInfo,uint64_t maxTotalSize
 		);
+	protected:
+		virtual void MoveInternalBuffer(IBuffer &other) override;
 	};
 };
 

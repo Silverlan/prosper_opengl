@@ -12,21 +12,44 @@
 using namespace prosper;
 
 #pragma optimize("",off)
-std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo)
+#if 0
+#include <gli/gli.hpp>
+#include <iostream>
+static void test_cubemap()
 {
-	GLenum type = GL_TEXTURE_2D;
-	switch(createInfo.type)
-	{
-	case prosper::ImageType::e1D:
-		type = GL_TEXTURE_1D;
-		break;
-	case prosper::ImageType::e2D:
-		type = GL_TEXTURE_2D;
-		break;
-	case prosper::ImageType::e3D:
-		type = GL_TEXTURE_3D;
-		break;
-	}
+	auto ddsTex = gli::load_dds("E:/projects/pragma/build_winx64/output/addons/converted/materials/skybox/sky_day01_08.dds");
+	uint32_t w = ddsTex.extent().x;
+	uint32_t h = ddsTex.extent().y;
+	GLuint tex;
+	auto type = GL_TEXTURE_CUBE_MAP;
+	glCreateTextures(type,1,&tex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(type,tex);
+	static_cast<GLContext&>(context).CheckResult();
+	// TODO: Miplevels
+	glTextureStorage2D(tex,1,GL_COMPRESSED_RGB_S3TC_DXT1_EXT,w,h);
+	static_cast<GLContext&>(context).CheckResult();
+
+	glBindTexture(type,tex);
+
+	GLint size;
+	glGetTextureLevelParameteriv(tex,0 /* mipLevel */,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
+	static_cast<GLContext&>(context).CheckResult();
+
+	auto *data = ddsTex.data(0,0,0);
+	auto size2 = ddsTex.size(0);
+	std::cout<<"Size: "<<size<<","<<size2<<std::endl;
+	glCompressedTexSubImage2D(
+		GL_TEXTURE_CUBE_MAP_POSITIVE_X,0 /* mipLevel */,0,0,w,h,GL_COMPRESSED_RGB_S3TC_DXT1_EXT,size2,data
+	);
+	static_cast<GLContext&>(context).CheckResult();
+}
+#endif
+
+std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,const IPrContext::ImageData &imgData)
+{
+	auto isCubemap = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::Cubemap);
+	auto type = GetImageType(createInfo);
 	GLuint tex;
 	glCreateTextures(type,1,&tex);
 	glActiveTexture(GL_TEXTURE0);
@@ -35,18 +58,138 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 	uint32_t mipLevels = 1;
 	if(umath::is_flag_set(createInfo.flags,prosper::util::ImageCreateInfo::Flags::FullMipmapChain))
 		mipLevels = prosper::util::calculate_mipmap_count(createInfo.width,createInfo.height);
-	auto format = prosper::util::to_opengl_image_format(createInfo.format);
-	glTextureStorage2D(tex,mipLevels,format,createInfo.width,createInfo.height);
+	GLenum pixelFormat;
+	auto format = prosper::util::to_opengl_image_format(createInfo.format,&pixelFormat);
+	if(IsLayered(createInfo) == false)
+		glTextureStorage2D(tex,mipLevels,format,createInfo.width,createInfo.height);
+	else
+		glTextureStorage3D(tex,mipLevels,format,createInfo.width,createInfo.height,createInfo.layers);
+
+	auto img = std::shared_ptr<GLImage>{new GLImage{context,createInfo,tex,pixelFormat}};
+	if(static_cast<GLContext&>(context).CheckResult() == false)
+		return nullptr;
+	for(auto iLayer=decltype(imgData.size()){0u};iLayer<imgData.size();++iLayer)
+	{
+		auto &layerData = imgData.at(iLayer);
+		for(auto iMipmap=decltype(layerData.size()){0u};iMipmap<layerData.size();++iMipmap)
+		{
+			auto w = img->GetWidth(iMipmap);
+			auto h = img->GetHeight(iMipmap);
+			auto size = img->GetLayerSize(w,h);
+			if(img->WriteImageData(w,h,iLayer,iMipmap,size,layerData.at(iMipmap)) == false)
+				return false;
+		}
+	}
 	static_cast<GLContext&>(context).CheckResult();
-	return std::shared_ptr<GLImage>{new GLImage{context,createInfo,tex}};
+	return img;
 }
-GLImage::GLImage(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,GLuint texture)
-	: IImage{context,createInfo},m_image{texture}
+uint64_t GLImage::GetLayerSize(uint32_t w,uint32_t h) const
+{
+	return w *h *(prosper::util::is_compressed_format(GetFormat()) ? prosper::util::get_block_size(GetFormat()) : prosper::util::get_byte_size(GetFormat()));
+}
+bool GLImage::WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data)
+{
+	auto type = GetImageType(layerIndex);
+	auto is3DType = (type == GL_TEXTURE_2D_ARRAY || type == GL_TEXTURE_3D);
+	auto isCubemap = IsCubemap();
+	glBindTexture(isCubemap ? GL_TEXTURE_CUBE_MAP : type,GetGLImage());
+	if(prosper::util::is_compressed_format(GetFormat()))
+	{
+		if(w != util::calculate_mipmap_size(GetWidth(),mipLevel) || h != util::calculate_mipmap_size(GetHeight(),mipLevel))
+			return false;
+		auto format = prosper::util::to_opengl_image_format(GetFormat());
+		if(is3DType == false)
+		{
+			glCompressedTexSubImage2D(
+				type,mipLevel,0,0,w,h,format,size,data
+			);
+		}
+		else
+		{
+			glCompressedTexSubImage3D(
+				type,mipLevel,0,0,layerIndex,w,h,1,format,size,data
+			);
+		}
+		return static_cast<GLContext&>(GetContext()).CheckResult();
+	}
+	if(is3DType == false)
+	{
+		glTexSubImage2D(
+			type,mipLevel,0,0,w,h,GetPixelDataFormat(),GL_UNSIGNED_BYTE,data
+		);
+	}
+	else
+	{
+		glTexSubImage3D(
+			type,mipLevel,0,0,layerIndex,w,h,1,GetPixelDataFormat(),GL_UNSIGNED_BYTE,data
+		);
+	}
+	return static_cast<GLContext&>(GetContext()).CheckResult();
+}
+bool GLImage::IsLayered() const {return IsLayered(GetCreateInfo());}
+bool GLImage::IsLayered(const prosper::util::ImageCreateInfo &createInfo) {return (createInfo.layers > 1 && umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::Cubemap) == false);}
+GLenum GLImage::GetImageType(const prosper::util::ImageCreateInfo &createInfo)
+{
+	GLenum type = GL_TEXTURE_2D;
+	if(umath::is_flag_set(createInfo.flags,prosper::util::ImageCreateInfo::Flags::Cubemap))
+		type = GL_TEXTURE_CUBE_MAP;
+	else
+	{
+		switch(createInfo.type)
+		{
+		case prosper::ImageType::e1D:
+			type = IsLayered(createInfo) ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D;
+			break;
+		case prosper::ImageType::e2D:
+			type = IsLayered(createInfo) ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+			break;
+		case prosper::ImageType::e3D:
+			type = GL_TEXTURE_3D;
+			break;
+		}
+	}
+	return type;
+}
+
+/////////////
+
+GLImage::GLImage(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,GLuint texture,GLenum pixelFormat)
+	: IImage{context,createInfo},m_image{texture},m_pixelDataFormat{pixelFormat}
 {}
 GLImage::~GLImage()
 {
 	if(m_image != 0)
 		glDeleteTextures(1,&m_image);
+}
+GLenum GLImage::GetBufferBit() const
+{
+	return prosper::util::is_depth_format(GetFormat()) ? GL_DEPTH_BUFFER_BIT : GL_COLOR_BUFFER_BIT;
+}
+GLenum GLImage::GetImageType() const
+{
+	return GetImageType(GetCreateInfo());
+}
+GLenum GLImage::GetImageType(uint32_t layerIndex) const
+{
+	auto type = GetImageType();
+	if(type != GL_TEXTURE_CUBE_MAP)
+		return type;
+	switch(layerIndex)
+	{
+	case 0:
+		return GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+	case 1:
+		return GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
+	case 2:
+		return GL_TEXTURE_CUBE_MAP_POSITIVE_Y;
+	case 3:
+		return GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
+	case 4:
+		return GL_TEXTURE_CUBE_MAP_POSITIVE_Z;
+	case 5:
+		return GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
+	}
+	return GL_INVALID_VALUE;
 }
 std::shared_ptr<GLFramebuffer> GLImage::GetOrCreateFramebuffer(uint32_t baseLayerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount)
 {
@@ -98,6 +241,13 @@ bool GLImage::Map(DeviceSize offset,DeviceSize size,void **outPtr)
 {
 	return false; // TODO
 }
+
+bool GLImage::Unmap()
+{
+	return false; // TODO
+}
+
+const void *GLImage::GetInternalHandle() const {return reinterpret_cast<void*>(m_image);}
 
 bool GLImage::DoSetMemoryBuffer(IBuffer &buffer)
 {

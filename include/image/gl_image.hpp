@@ -17,19 +17,31 @@ namespace prosper
 		: public prosper::IImage
 	{
 	public:
-		static std::shared_ptr<IImage> Create(IPrContext &context,const util::ImageCreateInfo &createInfo);
+		static std::shared_ptr<IImage> Create(IPrContext &context,const util::ImageCreateInfo &createInfo,const IPrContext::ImageData &imgData);
+		static GLenum GetImageType(const util::ImageCreateInfo &createInfo);
+		static bool IsLayered(const util::ImageCreateInfo &createInfo);
 
 		virtual ~GLImage() override;
 		virtual std::optional<util::SubresourceLayout> GetSubresourceLayout(uint32_t layerId=0,uint32_t mipMapIdx=0) override;
 		virtual DeviceSize GetAlignment() const override;
 		virtual bool Map(DeviceSize offset,DeviceSize size,void **outPtr=nullptr) override;
+		virtual bool Unmap() override;
+		virtual const void *GetInternalHandle() const override;
+		uint64_t GetLayerSize(uint32_t w,uint32_t h) const;
+		bool WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data);
+		GLenum GetBufferBit() const;
+		GLenum GetImageType() const;
+		GLenum GetImageType(uint32_t layerIndex) const;
 		GLuint GetGLImage() const {return m_image;}
+		GLenum GetPixelDataFormat() const {return m_pixelDataFormat;}
+		bool IsLayered() const;
 		std::shared_ptr<GLFramebuffer> GetOrCreateFramebuffer(uint32_t baseLayerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount);
 	private:
 		friend GLContext;
-		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo,GLuint texture);
+		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo,GLuint texture,GLenum pixelFormat);
 		virtual bool DoSetMemoryBuffer(IBuffer &buffer) override;
 		GLuint m_image = GL_INVALID_VALUE;
+		GLenum m_pixelDataFormat;
 
 		std::vector<std::shared_ptr<GLFramebuffer>> m_framebuffers;
 	};

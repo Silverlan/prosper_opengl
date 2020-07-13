@@ -5,9 +5,13 @@
 #include "gl_command_buffer.hpp"
 #include "gl_context.hpp"
 #include "image/gl_image.hpp"
+#include "image/gl_image_view.hpp"
+#include "image/gl_sampler.hpp"
 #include "buffers/gl_buffer.hpp"
 #include "shader/prosper_shader.hpp"
 #include "shader/gl_shader_clear.hpp"
+#include "shader/gl_shader_blit.hpp"
+#include "gl_render_pass.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
 #include <sharedutils/scope_guard.h>
@@ -33,6 +37,8 @@ bool prosper::GLCommandBuffer::StopRecording() const
 bool prosper::GLCommandBuffer::RecordBindIndexBuffer(IBuffer &buf,IndexType indexType,DeviceSize offset)
 {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dynamic_cast<GLBuffer&>(buf).GetGLBuffer());
+	m_boundIndexBufferData.indexType = indexType;
+	m_boundIndexBufferData.offset = buf.GetStartOffset() +offset;
 	return GetContext().CheckResult();
 }
 
@@ -51,6 +57,12 @@ bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGrap
 	glOffsets.reserve(numBuffers);
 	glStrides.reserve(numBuffers);
 	uint32_t absAttrId = 0;
+	for(auto i=decltype(startBinding){0u};i<startBinding;++i)
+	{
+		uint32_t numAttributes;
+		createInfo.GetVertexBindingProperties(i,nullptr,nullptr,nullptr,&numAttributes);
+		absAttrId += numAttributes;
+	}
 	for(auto i=decltype(buffers.size()){0u};i<buffers.size();++i)
 	{
 		auto &buf = buffers.at(i);
@@ -67,9 +79,9 @@ bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGrap
 		{
 			auto &attr = attrs[attrId];
 			// TODO: Use VAOs instead
-			glEnableVertexAttribArray(i);
+			glEnableVertexAttribArray(absAttrId);
 			glBindBuffer(GL_ARRAY_BUFFER,dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
-			int32_t offset = attr.offsetInBytes;
+			int32_t offset = buf->GetStartOffset() +attr.offsetInBytes;
 			glVertexAttribPointer(
 				absAttrId++, // Attribute index
 				prosper::util::get_byte_size(attr.format) /sizeof(float), // Size
@@ -78,9 +90,12 @@ bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGrap
 				stride, // Stride
 				(void*)offset // Offset
 			);
+			if(absAttrId >= m_boundPipelineData.vertexBuffers.size())
+				m_boundPipelineData.vertexBuffers.resize(absAttrId +1);
+			m_boundPipelineData.vertexBuffers.at(absAttrId) = buf;
 		}
 	}
-
+	m_boundPipelineData.numVertexAttribBindings = umath::max(absAttrId,m_boundPipelineData.numVertexAttribBindings);
 	//glBindVertexBuffers(startBinding,numBuffers,glBuffers.data(),glOffsets.data(),glStrides.data());
 	return GetContext().CheckResult();
 }
@@ -88,6 +103,11 @@ bool prosper::GLCommandBuffer::RecordDispatchIndirect(prosper::IBuffer &buffer,D
 {
 	glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER,dynamic_cast<GLBuffer&>(buffer).GetGLBuffer());
 	glDispatchComputeIndirect(size);
+	return GetContext().CheckResult();
+}
+bool prosper::GLCommandBuffer::RecordDispatch(uint32_t x,uint32_t y,uint32_t z)
+{
+	glDispatchCompute(x,y,z);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordDraw(uint32_t vertCount,uint32_t instanceCount,uint32_t firstVertex,uint32_t firstInstance)
@@ -101,18 +121,15 @@ bool prosper::GLCommandBuffer::RecordDraw(uint32_t vertCount,uint32_t instanceCo
 }
 bool prosper::GLCommandBuffer::RecordDrawIndexed(uint32_t indexCount,uint32_t instanceCount,uint32_t firstIndex,uint32_t firstInstance)
 {
-#if 0
-	prosper::ShaderGraphics *x;
-	GLenum topology;
-	prosper::VertexInputAttribute vertexInputAttribute;
-	static_cast<prosper::GraphicsPipelineCreateInfo*>(x->GetPipelineCreateInfo(0))->GetVertexBindingProperties(
-		0,nullptr,nullptr,nullptr,nullptr,&vertexInputAttribute,nullptr
-	);
+	if(m_boundPipelineData.shader.expired() || m_boundPipelineData.pipelineId.has_value() == false || m_boundPipelineData.shader->IsGraphicsShader() == false)
+		return false;
+	GetContext().CheckResult();
+	auto &pipelineCreateInfo = *static_cast<prosper::GraphicsPipelineCreateInfo*>(static_cast<ShaderGraphics*>(m_boundPipelineData.shader.get())->GetPipelineCreateInfo(*m_boundPipelineData.shaderPipelineId));
+	auto glTopology = prosper::util::to_opengl_enum(pipelineCreateInfo.GetPrimitiveTopology());
 
-	glDrawElements(topology,indexCount,GL_UNSIGNED_SHORT,nullptr);
+	int32_t offset = m_boundIndexBufferData.offset;
+	glDrawElements(glTopology,indexCount,util::to_opengl_enum(m_boundIndexBufferData.indexType),(void*)offset);
 	return GetContext().CheckResult();
-#endif
-	return false;
 }
 bool prosper::GLCommandBuffer::RecordDrawIndexedIndirect(IBuffer &buf,DeviceSize offset,uint32_t drawCount,uint32_t stride)
 {
@@ -169,8 +186,8 @@ bool prosper::GLCommandBuffer::RecordPipelineBarrier(const prosper::util::Pipeli
 
 bool prosper::GLCommandBuffer::RecordSetDepthBias(float depthBiasConstantFactor,float depthBiasClamp,float depthBiasSlopeFactor)
 {
-
-	return false; // TODO
+	// TODO
+	return true;
 }
 static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_t layerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount,const std::array<float,4> &clearColor,float clearDepth,bool depth)
 {
@@ -192,8 +209,14 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 	}
 	else
 	{
-		glClearDepth(depth);
+		GLboolean depthWritesEnabled;
+		glGetBooleanv(GL_DEPTH_WRITEMASK,&depthWritesEnabled);
+		glDepthMask(GL_TRUE);
+
+		glClearDepth(clearDepth);
 		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glDepthMask(depthWritesEnabled);
 	}
 }
 bool prosper::GLCommandBuffer::RecordClearImage(IImage &img,ImageLayout layout,const std::array<float,4> &clearColor,const prosper::util::ClearImageInfo &clearImageInfo)
@@ -243,30 +266,37 @@ bool prosper::GLCommandBuffer::RecordClearAttachment(IImage &img,float clearDept
 }
 bool prosper::GLCommandBuffer::RecordUpdateBuffer(IBuffer &buffer,uint64_t offset,uint64_t size,const void *data)
 {
-	glNamedBufferSubData(dynamic_cast<GLBuffer&>(buffer).GetGLBuffer(),offset,size,data);
+	auto &glBuffer = dynamic_cast<GLBuffer&>(buffer);
+	glNamedBufferSubData(glBuffer.GetGLBuffer(),glBuffer.GetStartOffset() +offset,size,data);
 	return GetContext().CheckResult();
 }
 
-bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPoint,prosper::Shader &shader,PipelineID pipelineId,uint32_t firstSet,const std::vector<prosper::IDescriptorSet*> &descSets,const std::vector<uint32_t> dynamicOffsets)
+bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPoint,prosper::Shader &shader,PipelineID shaderPipelineId,uint32_t firstSet,const std::vector<prosper::IDescriptorSet*> &descSets,const std::vector<uint32_t> dynamicOffsets)
 {
-	auto &createInfo = *shader.GetPipelineCreateInfo(pipelineId);
+	PipelineID pipelineId;
+	if(shader.GetPipelineId(pipelineId,shaderPipelineId) == false)
+		return false;
+	auto &context = GetContext();
+	auto &createInfo = *shader.GetPipelineCreateInfo(shaderPipelineId);
 	auto &dsInfoItems = *createInfo.GetDsCreateInfoItems();
 	auto numSets = descSets.size();
-	// TODO
-	//GLuint blockIndex = glGetUniformBlockIndex(programHandle,
-	//	"BlobSettings");
 	for(auto i=decltype(numSets){0u};i<numSets;++i)
 	{
 		auto setIdx = firstSet +i;
 		auto &dsCreateInfo = dsInfoItems.at(setIdx);
+		auto dsOffset = dynamicOffsets.empty() ? 0 : dynamicOffsets.at(i);
 		auto *ds = descSets.at(i);
 		auto numBindings = ds->GetBindingCount();
 		for(auto j=decltype(numBindings){0u};j<numBindings;++j)
 		{
-			auto &binding = *ds->GetBinding(j);
-			auto bindingIdx = binding.GetBindingIndex();
-			auto layoutLocation = prosper::util::get_layout_location(setIdx,j);
-			auto type = binding.GetType();
+			auto *binding = ds->GetBinding(j);
+			if(binding == nullptr)
+				continue; // No binding; Is this legal?
+			auto bindingIdx = binding->GetBindingIndex();
+			auto bindingPoint = context.ShaderPipelineDescSetBindingIndexToBindingPoint(pipelineId,setIdx,bindingIdx);
+			if(bindingPoint.has_value() == false)
+				continue;
+			auto type = binding->GetType();
 			switch(type)
 			{
 			case prosper::DescriptorSetBinding::Type::Texture:
@@ -276,18 +306,10 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 				auto *tex = ds->GetBoundTexture(j,&layer);
 				if(layer.has_value() && GetContext().IsValidationEnabled())
 					GetContext().ValidationCallback(DebugMessageSeverityFlags::WarningBit,"Attempted to bind layer " +std::to_string(*layer) +" of texture '" +tex->GetDebugName() +"'! This is not allowed in OpenGL!");
-				//static_assert(false,"TODO: Bind where?");
-				auto it = m_boundPipelineData.shaderActiveTexturePerLocation.find(layoutLocation);
-				uint32_t activeTextureSlot;
-				if(it != m_boundPipelineData.shaderActiveTexturePerLocation.end())
-					activeTextureSlot = it->second;
-				else
-				{
-					activeTextureSlot = m_boundPipelineData.nextActiveTextureIndex++;
-					m_boundPipelineData.shaderActiveTexturePerLocation[layoutLocation] = activeTextureSlot;
-				}
+				uint32_t activeTextureSlot = *bindingPoint;
 				glBindTextureUnit(activeTextureSlot,tex ? static_cast<GLImage&>(tex->GetImage()).GetGLImage() : 0);
-				//glUniform1i(layoutLocation,activeTextureSlot);
+				auto *sampler = tex ? tex->GetSampler() : nullptr;
+				glBindSampler(activeTextureSlot,sampler ? static_cast<GLSampler&>(*sampler).GetGLSampler() : 0);
 				break;
 			}
 			case prosper::DescriptorSetBinding::Type::UniformBuffer:
@@ -295,24 +317,16 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 			{
 				DeviceSize offset,size;
 				auto *buf = ds->GetBoundBuffer(j,&offset,&size);
-				//static_assert(false,"TODO: Bind where?");
 				if(buf)
-					glBindBufferBase(GL_UNIFORM_BUFFER,layoutLocation,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer());
-					//;//glBindBufferRange(GL_UNIFORM_BUFFER,blockIndex,static_cast<GLBuffer&>(*buf).GetGLBuffer(),offset,size);
-				else
-					;//glBindBufferBase(GL_UNIFORM_BUFFER,layoutLocation,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer());
-				//glUniform1i(2,2); // Location -> Binding
+					glBindBufferRange(GL_UNIFORM_BUFFER,*bindingPoint,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
 				break;
 			}
 			case prosper::DescriptorSetBinding::Type::StorageBuffer:
 			{
 				DeviceSize offset,size;
 				auto *buf = ds->GetBoundBuffer(j,&offset,&size);
-				//static_assert(false,"TODO: Bind where?");
 				if(buf)
-					;//glBindBufferRange(GL_SHADER_STORAGE_BUFFER,blockIndex,static_cast<GLBuffer&>(*buf).GetGLBuffer(),offset,size);
-				else
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER,0,GL_NONE);
+					glBindBufferRange(GL_SHADER_STORAGE_BUFFER,*bindingPoint,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
 				break;
 			}
 			}
@@ -331,11 +345,15 @@ bool prosper::GLCommandBuffer::RecordPushConstants(prosper::Shader &shader,Pipel
 void prosper::GLCommandBuffer::ClearBoundPipeline()
 {
 	ICommandBuffer::ClearBoundPipeline();
+	auto numVertexAttribBindings = m_boundPipelineData.numVertexAttribBindings;
+	for(auto i=decltype(numVertexAttribBindings){0u};i<numVertexAttribBindings;++i)
+		glDisableVertexAttribArray(i);
 	m_boundPipelineData.pipelineId = {};
 	m_boundPipelineData.shader = {};
 	m_boundPipelineData.shaderPipelineId = {};
 	m_boundPipelineData.nextActiveTextureIndex = 0;
-	m_boundPipelineData.shaderActiveTexturePerLocation.clear();
+	m_boundPipelineData.numVertexAttribBindings = 0;
+	m_boundPipelineData.vertexBuffers.clear();
 }
 std::optional<prosper::PipelineID> prosper::GLCommandBuffer::GetBoundPipelineId() const {return m_boundPipelineData.pipelineId;}
 prosper::Shader *prosper::GLCommandBuffer::GetBoundShader() const {return m_boundPipelineData.shader.get();}
@@ -355,16 +373,14 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 		prosper::BlendOp blendOpColor,blendOpAlpha;
 		prosper::BlendFactor srcColorBlendFactor,dstColorBlendFactor,srcAlphaBlendFactor,dstAlphaBlendFactor;
 		prosper::ColorComponentFlags channelWriteMask;
-		if(createInfo->GetColorBlendAttachmentProperties(
+		auto res = createInfo->GetColorBlendAttachmentProperties(
 			0 /* sub-pass id */,&blendingEnabled,
 			&blendOpColor,&blendOpAlpha,
 			&srcColorBlendFactor,&dstColorBlendFactor,
 			&srcAlphaBlendFactor,&dstAlphaBlendFactor,
 			&channelWriteMask
-		) == false)
-			return false;
-		
-		if(blendingEnabled)
+		);
+		if(res && blendingEnabled)
 		{
 			glEnable(GL_BLEND);
 			glBlendEquationSeparate(util::to_opengl_enum(blendOpColor),util::to_opengl_enum(blendOpAlpha));
@@ -381,6 +397,19 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 		}
 		else
 			glDisable(GL_BLEND);
+
+		bool isDepthTestEnabled;
+		prosper::CompareOp depthCompareOp;
+		createInfo->GetDepthTestState(&isDepthTestEnabled,&depthCompareOp);
+		if(isDepthTestEnabled)
+		{
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(util::to_opengl_enum(depthCompareOp));
+		}
+		else
+			glDisable(GL_DEPTH_TEST);
+		
+		glDepthMask(createInfo->AreDepthWritesEnabled() ? GL_TRUE : GL_FALSE);
 	}
 
 	auto &buf = GetContext().GetPushConstantBuffer();
@@ -455,57 +484,111 @@ bool prosper::GLCommandBuffer::DoRecordCopyBuffer(const prosper::util::BufferCop
 }
 bool prosper::GLCommandBuffer::DoRecordCopyImage(const prosper::util::CopyInfo &copyInfo,IImage &imgSrc,IImage &imgDst,uint32_t w,uint32_t h)
 {
+	util::BlitInfo blitInfo {};
+	blitInfo.extentsSrc = prosper::Extent2D{};
+	blitInfo.extentsSrc->width = w;
+	blitInfo.extentsSrc->height = h;
 
-	/*glCopyImageSubData(
-		static_cast<GLImage&>(imgSrc).GetGLImage(),static_cast<GLImage&>(imgDst).GetGLImage(),copyInfo.srcSubresource.mipLevel,
-		x,y,z,,
-		);*/
-	// TODO
+	blitInfo.extentsDst = prosper::Extent2D{};
+	blitInfo.extentsDst->width = w;
+	blitInfo.extentsDst->height = h;
 
-	return false; // TODO
+	blitInfo.offsetSrc = {copyInfo.srcOffset.x,copyInfo.srcOffset.y};
+	blitInfo.offsetDst = {copyInfo.dstOffset.x,copyInfo.dstOffset.y};
+
+	blitInfo.srcSubresourceLayer = copyInfo.srcSubresource;
+	blitInfo.dstSubresourceLayer = copyInfo.dstSubresource;
+
+	std::array<Offset3D,2> srcOffsets {};
+	srcOffsets.at(1) = {static_cast<int32_t>(w),static_cast<int32_t>(h),0};
+	std::array<Offset3D,2> dstOffsets {};
+	dstOffsets.at(1) = {static_cast<int32_t>(w),static_cast<int32_t>(h),0};
+	return DoRecordBlitImage(blitInfo,imgSrc,imgDst,srcOffsets,dstOffsets);
 }
 
 bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::BufferImageCopyInfo &copyInfo,IBuffer &bufferSrc,IImage &imgDst,uint32_t w,uint32_t h)
 {
-	glBindTexture(GL_TEXTURE_2D,static_cast<GLImage&>(imgDst).GetGLImage());
-	if(prosper::util::is_compressed_format(imgDst.GetFormat()))
+	static std::vector<uint8_t> imgData {};
+	imgData.clear();
+	auto &glImgDst = static_cast<GLImage&>(imgDst);
+
+	if(util::is_compressed_format(imgDst.GetFormat()) && (w != imgDst.GetWidth(copyInfo.mipLevel) || h != imgDst.GetHeight(copyInfo.mipLevel)))
+		return false;
+	GLint size;
+	if(util::is_compressed_format(imgDst.GetFormat()) == false)
+		size = glImgDst.GetLayerSize(w,h);
+	else
 	{
-		GLint size;
-		glGetTexLevelParameteriv(GL_TEXTURE_2D,copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
-
-		std::vector<uint8_t> imgData {};
-		imgData.resize(size);
-		bufferSrc.Read(0,imgData.size(),imgData.data());
-
-		auto format = prosper::util::to_opengl_image_format(imgDst.GetFormat());
-		glCompressedTexSubImage2D(
-			GL_TEXTURE_2D,copyInfo.mipLevel,0,0,w,h,format,imgData.size(),imgData.data()
-		);
-		return GetContext().CheckResult();
+		glGetTextureLevelParameteriv(glImgDst.GetGLImage(),copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
+		size /= glImgDst.GetLayerCount();
 	}
-	auto size = w *h *prosper::util::get_byte_size(imgDst.GetFormat());
-	std::vector<uint8_t> imgData {};
 	imgData.resize(size);
-	bufferSrc.Read(0,imgData.size(),imgData.data());
-	glTexSubImage2D(
-		GL_TEXTURE_2D,copyInfo.mipLevel,0,0,w,h,GL_RGBA,GL_UNSIGNED_BYTE,imgData.data()
-	);
+	for(auto iLayer=copyInfo.baseArrayLayer;iLayer<(copyInfo.baseArrayLayer +copyInfo.layerCount);++iLayer)
+	{
+		bufferSrc.Read(0,imgData.size(),imgData.data());
+		auto res = glImgDst.WriteImageData(w,h,iLayer,copyInfo.mipLevel,size,imgData.data());
+		if(res == false)
+			return false;
+	}
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::BufferImageCopyInfo &copyInfo,IImage &imgSrc,ImageLayout srcImageLayout,IBuffer &bufferDst,uint32_t w,uint32_t h)
 {
+	auto &glImgDst = static_cast<GLImage&>(imgSrc);
+	auto format = imgSrc.GetFormat();
 
-	return false; // TODO
+	uint64_t size = 0;
+	if(util::is_compressed_format(format))
+	{
+		GLint isize;
+		glGetTextureLevelParameteriv(glImgDst.GetGLImage(),copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&isize);
+		size = isize;
+	}
+	else
+		size = w *h *util::get_byte_size(format) *copyInfo.layerCount;
+
+	static std::vector<uint8_t> pixelData {};
+	pixelData.resize(size);
+	glGetTextureSubImage(
+		glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,
+		glImgDst.GetPixelDataFormat(),GL_UNSIGNED_BYTE,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
+	);
+	bufferDst.Write(copyInfo.bufferOffset,pixelData.size() *sizeof(pixelData.front()),pixelData.data());
+	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::DoRecordBlitImage(const prosper::util::BlitInfo &blitInfo,IImage &imgSrc,IImage &imgDst,const std::array<Offset3D,2> &srcOffsets,const std::array<Offset3D,2> &dstOffsets)
 {
-	auto framebufferSrc = static_cast<GLImage&>(imgSrc).GetOrCreateFramebuffer(blitInfo.srcSubresourceLayer.baseArrayLayer,blitInfo.srcSubresourceLayer.layerCount,blitInfo.srcSubresourceLayer.mipLevel,1);
+	if(util::is_compressed_format(imgDst.GetFormat()) || IsPrimary() == false)
+		return false; // Can't blit into a compressed format
 	auto framebufferDst = static_cast<GLImage&>(imgDst).GetOrCreateFramebuffer(blitInfo.dstSubresourceLayer.baseArrayLayer,blitInfo.dstSubresourceLayer.layerCount,blitInfo.dstSubresourceLayer.mipLevel,1);
+	if(util::is_compressed_format(imgSrc.GetFormat()))
+	{
+		// Compressed textures can't be attached to a framebuffer (even for reading),
+		// so we can't use glBlitFramebuffer to copy it. We'll have to use a shader to
+		// do it instead.
+		GLint drawFboId = 0;
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebufferDst->GetGLFramebuffer());
+		static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,blitInfo.dstSubresourceLayer.baseArrayLayer,&imgDst,framebufferDst.get());
+		auto *shaderBlit = GetContext().GetBlitShader();
+		if(shaderBlit->BeginDraw(std::dynamic_pointer_cast<prosper::IPrimaryCommandBuffer>(shared_from_this())))
+		{
+			glBindTextureUnit(0,static_cast<GLImage&>(imgSrc).GetGLImage());
+			shaderBlit->Draw();
+			shaderBlit->EndDraw();
+		}
+
+		static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,drawFboId);
+		return GetContext().CheckResult();
+	}
+	auto framebufferSrc = static_cast<GLImage&>(imgSrc).GetOrCreateFramebuffer(blitInfo.srcSubresourceLayer.baseArrayLayer,blitInfo.srcSubresourceLayer.layerCount,blitInfo.srcSubresourceLayer.mipLevel,1);
 	glBlitNamedFramebuffer(
 		framebufferSrc->GetGLFramebuffer(),framebufferDst->GetGLFramebuffer(),
 		srcOffsets.at(0).x,srcOffsets.at(0).y,srcOffsets.at(1).x,srcOffsets.at(1).y,
 		dstOffsets.at(0).x,dstOffsets.at(0).y,dstOffsets.at(1).x,dstOffsets.at(1).y,
-		GL_COLOR_BUFFER_BIT,GL_LINEAR
+		static_cast<GLImage&>(imgSrc).GetBufferBit(),GL_LINEAR
 	);
 	return GetContext().CheckResult();
 }
@@ -532,13 +615,40 @@ bool prosper::GLPrimaryCommandBuffer::DoRecordBeginRenderPass(
 )
 {
 	glBindFramebuffer(GL_FRAMEBUFFER,static_cast<GLFramebuffer&>(fb).GetGLFramebuffer());
+	auto &rpCreateInfo = rp.GetCreateInfo();
+	for(auto attId=decltype(rpCreateInfo.attachments.size()){0u};attId<rpCreateInfo.attachments.size();++attId)
+	{
+		auto &attInfo = rpCreateInfo.attachments.at(attId);
+		if(attInfo.loadOp != prosper::AttachmentLoadOp::Clear)
+			continue;
+		auto *imgView = fb.GetAttachment(attId);
+		if(imgView == nullptr)
+			return false;
+		auto &attImg = imgView->GetImage();
+		auto &clearVal = clearValues.at(attId);
+		if(util::is_depth_format(attImg.GetFormat()))
+		{
+			if(layerId)
+				RecordClearAttachment(attImg,clearVal.depthStencil.depth,*layerId);
+			else
+				RecordClearAttachment(attImg,clearVal.depthStencil.depth);
+		}
+		else
+		{
+			auto &clearCol = clearVal.color.float32;
+			if(layerId)
+				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,*layerId);
+			else
+				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,0u);
+		}
+	}
 	return dynamic_cast<GLContext&>(IPrimaryCommandBuffer::GetContext()).CheckResult();
 }
 bool prosper::GLPrimaryCommandBuffer::StartRecording(bool oneTimeSubmit,bool simultaneousUseAllowed) const
 {
 	return true;
 }
-bool prosper::GLPrimaryCommandBuffer::RecordEndRenderPass()
+bool prosper::GLPrimaryCommandBuffer::DoRecordEndRenderPass()
 {
 	return true; // TODO
 }

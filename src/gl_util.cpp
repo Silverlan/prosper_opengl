@@ -161,147 +161,332 @@ GLenum prosper::util::to_opengl_enum(prosper::BlendFactor blendFactor)
 	return 0;
 }
 
-uint32_t prosper::util::get_layout_location(uint32_t setIdx,uint32_t bindingIdx)
+GLenum prosper::util::to_opengl_enum(prosper::IndexType indexType)
 {
-	// Index 0 is reserved for push constants
-	return setIdx *10 +bindingIdx +1;
+	switch(indexType)
+	{
+	case IndexType::UInt16:
+		return GL_UNSIGNED_SHORT;
+	case IndexType::UInt32:
+		return  GL_UNSIGNED_INT;
+	}
+	assert(false);
+	return 0;
 }
 
-GLenum prosper::util::to_opengl_image_format(prosper::Format format)
+GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optOutPixelDataFormat)
 {
 	switch(format)
 	{
 	case prosper::Format::R8_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R8;
 	case prosper::Format::R8_SNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R8_SNORM;
 	case prosper::Format::R8_SRGB:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_SRGB8;
 	case prosper::Format::R8G8_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
 		return GL_RG8;
 	case prosper::Format::R8G8B8_UNorm_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
+		return GL_RGB8;
+	case prosper::Format::B8G8R8_UNorm_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_BGR;
 		return GL_RGB8;
 	case prosper::Format::R8G8B8A8_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGBA8;
-
+	case prosper::Format::B8G8R8A8_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_BGRA;
+		return GL_RGBA8;
 	case prosper::Format::R16_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R16;
 	case prosper::Format::R16_SNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R16_SNORM;;
 	case prosper::Format::R16G16_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
 		return GL_RG16;
 	case prosper::Format::R16G16B16_UNorm_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_RGB16;
 	case prosper::Format::R16G16B16A16_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGBA16;
 
 	case prosper::Format::R8G8_SNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
 		return GL_RG8_SNORM;
 
 		//case prosper::Format::B8G8R8A8_UNorm:
 		//	return GL_B8G8R8A8_UNorm;
 
 	case prosper::Format::R32_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R32F;
 	case prosper::Format::R32G32_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
 		return GL_RG32F;
 	case prosper::Format::R32G32B32_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_RGB32F;
 	case prosper::Format::R32G32B32A32_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGBA32F;
 	case prosper::Format::R8G8B8A8_SNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGBA8_SNORM;
+	case prosper::Format::B8G8R8_SInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_BGR_INTEGER;
+		return GL_BGR_INTEGER;
+	case prosper::Format::B8G8R8A8_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_BGRA_INTEGER;
+		return GL_BGRA_INTEGER;
 	case prosper::Format::R4G4B4A4_UNorm_Pack16:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 	case prosper::Format::R4G4_UNorm_Pack8:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
+		return GL_RG8; // TODO
 	case prosper::Format::R5G6B5_UNorm_Pack16:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
+		return GL_RGB5;
 	case prosper::Format::B5G6R5_UNorm_Pack16:
-		return GL_RGB4;
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_BGR;
+		return GL_RGB5;
 	case prosper::Format::R5G5B5A1_UNorm_Pack16:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGB5;
 	case prosper::Format::R8_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R8I;
 	case prosper::Format::R8G8_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG8I;
 	case prosper::Format::R8G8B8_SInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB8I;
 	case prosper::Format::R8G8B8A8_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA8I;
 	case prosper::Format::R8_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R8UI;
 	case prosper::Format::R8G8_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG8UI;
 	case prosper::Format::R8G8B8_UInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB8UI;
 	case prosper::Format::R8G8B8A8_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA8UI;
 	case prosper::Format::R16_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R16I;
 	case prosper::Format::R16G16_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG16I;
 	case prosper::Format::R16G16B16_SInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB16I;
 	case prosper::Format::R16G16B16A16_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA16I;
 	case prosper::Format::R16_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R16UI;
 	case prosper::Format::R16G16_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG16UI;
 	case prosper::Format::R16G16B16_UInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB16UI;
 	case prosper::Format::R16G16B16A16_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA16UI;
 	case prosper::Format::R32_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R32I;
 	case prosper::Format::R32G32_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG32I;
 	case prosper::Format::R32G32B32_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB32I;
 	case prosper::Format::R32G32B32A32_SInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA32I;
 	case prosper::Format::R32_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED_INTEGER;
 		return GL_R32UI;
 	case prosper::Format::R32G32_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG_INTEGER;
 		return GL_RG32UI;
 	case prosper::Format::R32G32B32_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB_INTEGER;
 		return GL_RGB32UI;
 	case prosper::Format::R32G32B32A32_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA32UI;
 	case prosper::Format::R16_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
 		return GL_R16F;
 	case prosper::Format::R16G16_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
 		return GL_RG16F;
 	case prosper::Format::R16G16B16_SFloat_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_RGB16F;
 	case prosper::Format::R16G16B16A16_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_RGBA16F;
 	case prosper::Format::R16G16B16_SNorm_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_RGB16_SNORM;
 	case prosper::Format::R8G8B8A8_SRGB:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_SRGB8_ALPHA8;
 	case prosper::Format::R8G8B8_SRGB_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_SRGB8;
 	case prosper::Format::D16_UNorm:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_DEPTH_COMPONENT;
 		return GL_DEPTH_COMPONENT16;
 	case prosper::Format::D24_UNorm_S8_UInt_PoorCoverage:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_DEPTH_COMPONENT;
 		return GL_DEPTH_COMPONENT24;
 	case prosper::Format::D32_SFloat:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_DEPTH_COMPONENT;
 		return GL_DEPTH_COMPONENT32F;
 	case prosper::Format::BC1_RGB_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
 	case prosper::Format::BC1_RGB_SRGB_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_COMPRESSED_SRGB_S3TC_DXT1_EXT;
 	case prosper::Format::BC1_RGBA_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 	case prosper::Format::BC1_RGBA_SRGB_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
 	case prosper::Format::BC2_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 	case prosper::Format::BC2_SRGB_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
 	case prosper::Format::BC3_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
 		return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 	case prosper::Format::BC3_SRGB_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
 		return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+
+	case prosper::Format::BC4_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
+		return GL_COMPRESSED_RED_RGTC1;
+	case prosper::Format::BC4_SNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RED;
+		return GL_COMPRESSED_SIGNED_RED_RGTC1;
+	case prosper::Format::BC5_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
+		return GL_COMPRESSED_RG_RGTC2;
+	case prosper::Format::BC5_SNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RG;
+		return GL_COMPRESSED_SIGNED_RG_RGTC2;
+	case prosper::Format::BC6H_UFloat_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
+		return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+	case prosper::Format::BC6H_SFloat_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
+		return GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
+	case prosper::Format::BC7_UNorm_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
+		return GL_COMPRESSED_RGBA_BPTC_UNORM;
+	case prosper::Format::BC7_SRGB_Block:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGB;
+		return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
 	}
 	throw std::logic_error{"Unsupported format!"};
 	// TODO: Add ALL supported formats!

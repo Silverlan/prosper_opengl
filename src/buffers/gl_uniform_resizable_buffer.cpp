@@ -6,7 +6,6 @@
 #include "buffers/gl_uniform_resizable_buffer.hpp"
 #include "prosper_util.hpp"
 #include "buffers/prosper_buffer.hpp"
-#include "vk_context.hpp"
 
 using namespace prosper;
 
@@ -21,4 +20,11 @@ prosper::GLUniformResizableBuffer::GLUniformResizableBuffer(
 {
 	GLBuffer::m_buffer = dynamic_cast<GLBuffer&>(buffer).m_buffer;
 	dynamic_cast<GLBuffer&>(buffer).m_buffer = 0; // Setting to 0 to ensure it won't get deleted
+}
+
+void prosper::GLUniformResizableBuffer::MoveInternalBuffer(IBuffer &other)
+{
+	auto &glBuffer = dynamic_cast<GLBuffer&>(other);
+	m_buffer = glBuffer.m_buffer;
+	glBuffer.m_buffer = 0;
 }

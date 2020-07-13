@@ -25,6 +25,7 @@
 
 // Note: These have to match the definitions of the OpenGL headers
 using GLuint = unsigned int;
+using GLenum = unsigned int;
 #define GL_INVALID_VALUE 0x0501
 struct __GLsync;
 using GLsync = __GLsync*;

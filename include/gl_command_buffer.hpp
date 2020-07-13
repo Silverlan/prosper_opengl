@@ -24,6 +24,7 @@ namespace prosper
 		virtual bool RecordBindIndexBuffer(IBuffer &buf,IndexType indexType=IndexType::UInt16,DeviceSize offset=0) override;
 		virtual bool RecordBindVertexBuffers(const prosper::ShaderGraphics &shader,const std::vector<IBuffer*> &buffers,uint32_t startBinding=0u,const std::vector<DeviceSize> &offsets={}) override;
 		virtual bool RecordDispatchIndirect(prosper::IBuffer &buffer,DeviceSize size) override;
+		virtual bool RecordDispatch(uint32_t x,uint32_t y,uint32_t z) override;
 		virtual bool RecordDraw(uint32_t vertCount,uint32_t instanceCount=1,uint32_t firstVertex=0,uint32_t firstInstance=0) override;
 		virtual bool RecordDrawIndexed(uint32_t indexCount,uint32_t instanceCount=1,uint32_t firstIndex=0,uint32_t firstInstance=0) override;
 		virtual bool RecordDrawIndexedIndirect(IBuffer &buf,DeviceSize offset,uint32_t drawCount,uint32_t stride) override;
@@ -79,9 +80,17 @@ namespace prosper
 			std::optional<PipelineID> pipelineId {};
 			mutable ::util::WeakHandle<prosper::Shader> shader {};
 			std::optional<PipelineID> shaderPipelineId {};
-			std::unordered_map<uint32_t,uint32_t> shaderActiveTexturePerLocation {};
 			uint32_t nextActiveTextureIndex = 0;
+			uint32_t numVertexAttribBindings = 0;
+
+			std::vector<IBuffer*> vertexBuffers {};
 		} m_boundPipelineData {};
+
+		struct BoundIndexBufferData
+		{
+			IndexType indexType = IndexType::UInt16;
+			DeviceSize offset = 0;
+		} m_boundIndexBufferData {};
 	};
 
 	class DLLPROSPER_GL GLPrimaryCommandBuffer
@@ -94,10 +103,10 @@ namespace prosper
 
 		// If no render pass is specified, the render target's render pass will be used
 		virtual bool StartRecording(bool oneTimeSubmit=true,bool simultaneousUseAllowed=false) const override;
-		virtual bool RecordEndRenderPass() override;
 		virtual bool RecordNextSubPass() override;
 	protected:
 		GLPrimaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual bool DoRecordEndRenderPass() override;
 		virtual bool DoRecordBeginRenderPass(prosper::IImage &img,prosper::IRenderPass &rp,prosper::IFramebuffer &fb,uint32_t *layerId,const std::vector<prosper::ClearValue> &clearValues) override;
 	};
 

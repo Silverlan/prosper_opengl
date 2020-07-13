@@ -9,6 +9,7 @@
 #include "image/gl_image_view.hpp"
 #include "buffers/gl_uniform_resizable_buffer.hpp"
 #include "buffers/gl_dynamic_resizable_buffer.hpp"
+#include "shader/gl_shader_post_processing.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_render_pass.hpp"
 #include "gl_descriptor_set_group.hpp"
@@ -19,12 +20,14 @@
 #include "gl_command_buffer.hpp"
 #include "shader/prosper_shader.hpp"
 #include "shader/gl_shader_clear.hpp"
+#include "shader/gl_shader_blit.hpp"
 #include <shader/prosper_pipeline_create_info.hpp>
-#include <prosper_glstospv.hpp>
+#include <prosper_glsl.hpp>
 #include <thread>
 #include <sharedutils/util_string.h>
 #include <buffers/prosper_buffer_create_info.hpp>
 #include <iglfw/glfw_window.h>
+#include <fsys/filesystem.h>
 
 #pragma optimize("",off)
 struct GLShaderStage;
@@ -141,12 +144,16 @@ bool GLShaderProgram::Link(std::string &outErr)
 	glGetProgramiv(m_program,GL_LINK_STATUS,&linkStatus);
 	if(linkStatus == GL_FALSE)
 	{
-		GLsizei len;
-		glGetShaderiv(m_program,GL_INFO_LOG_LENGTH,&len);
+		GLsizei len = 0;
+		glGetProgramiv(m_program,GL_INFO_LOG_LENGTH,&len);
 		std::vector<GLchar> vInfoLog;
 		vInfoLog.resize(len);
+		len = 0;
 		glGetProgramInfoLog(m_program,len,nullptr,vInfoLog.data());
-		outErr = vInfoLog.data();
+		if(len > 0)
+			outErr = vInfoLog.data();
+		else
+			outErr = "";
 		return false;
 	}
 	return true;
@@ -257,7 +264,7 @@ prosper::GLBuffer &prosper::GLContext::GetPushConstantBuffer() const {return dyn
 
 std::optional<GLuint> prosper::GLContext::GetPipelineProgram(PipelineID pipelineId) const
 {
-	return (pipelineId < m_pipelines.size()) ? m_pipelines.at(pipelineId)->GetProgramId() : std::optional<GLuint>{};
+	return (pipelineId < m_pipelines.size() && m_pipelines.at(pipelineId).program) ? m_pipelines.at(pipelineId).program->GetProgramId() : std::optional<GLuint>{};
 }
 
 bool prosper::GLContext::CheckResult()
@@ -267,7 +274,8 @@ bool prosper::GLContext::CheckResult()
 	auto err = glGetError();
 	if(err == GL_NO_ERROR)
 		return true;
-	return ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit,error_to_string(err));
+	ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit,error_to_string(err));
+	return false;
 }
 
 void prosper::GLContext::ReloadWindow()
@@ -299,6 +307,8 @@ void prosper::GLContext::InitWindow()
 	m_glfwWindow = nullptr;
 	GLFW::poll_events();
 	m_windowCreationInfo->api = GLFW::WindowCreationInfo::API::OpenGL;
+	if(IsValidationEnabled())
+		m_windowCreationInfo->flags |= GLFW::WindowCreationInfo::Flags::DebugContext;
 	m_glfwWindow = GLFW::Window::Create(*m_windowCreationInfo); // TODO: Release
 
 	const char *errDesc;
@@ -346,10 +356,71 @@ std::unique_ptr<prosper::ShaderModule> prosper::GLContext::CreateShaderModuleFro
 }
 std::shared_ptr<prosper::ShaderStageProgram> prosper::GLContext::CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload)
 {
-	auto shaderCode = prosper::load_glsl(*this,stage,shaderPath,&outInfoLog,&outDebugInfoLog);
+	auto shaderCode = prosper::glsl::load_glsl(*this,stage,shaderPath,&outInfoLog,&outDebugInfoLog);
 	if(shaderCode.has_value() == false)
 		return nullptr;
 	return GLShaderStage::Compile(stage,*shaderCode,outInfoLog);
+}
+bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
+{
+	outErrStage = prosper::ShaderStage::Unknown;
+	auto &stages = shader.GetStages();
+	std::vector<std::string> glslCodePerStage {};
+	std::vector<prosper::ShaderStage> glslCodeStages {};
+	glslCodePerStage.reserve(stages.size());
+	glslCodeStages.reserve(stages.size());
+	for(auto i=decltype(stages.size()){0};i<stages.size();++i)
+	{
+		auto &stage = stages.at(i);
+		if(stage == nullptr || stage->path.empty())
+			continue;
+		stage->stage = static_cast<prosper::ShaderStage>(i);
+		auto glslCode = prosper::glsl::load_glsl(const_cast<GLContext&>(*this),stage->stage,stage->path,&outInfoLog,&outDebugInfoLog);
+		if(glslCode.has_value() == false)
+		{
+			outErrStage = stage->stage;
+			return false;
+		}
+		glslCodePerStage.emplace_back(std::move(*glslCode));
+		glslCodeStages.push_back(stage->stage);
+	}
+	if(util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage,outInfoLog) == false)
+		return false;
+	auto &logCallback = shader.GetLogCallback();
+	for(auto i=decltype(glslCodePerStage.size()){0u};i<glslCodePerStage.size();++i)
+	{
+		auto stage = glslCodeStages.at(i);
+		std::shared_ptr<GLShaderStage> shaderStageProgram = GLShaderStage::Compile(stage,glslCodePerStage.at(i),outInfoLog);
+		if(shaderStageProgram == nullptr)
+		{
+			outErrStage = stage;
+			return false;
+		}
+		stages.at(umath::to_integral(stage))->program = shaderStageProgram;
+	}
+#if 0
+	// Output final shader code
+	// For debugging purposes only
+	if(shader.GetIdentifier() == "pbr")
+	{
+		{
+			auto stage = prosper::ShaderStage::Fragment;
+			auto it = std::find_if(glslCodeStages.begin(),glslCodeStages.end(),[stage](const prosper::ShaderStage &stageOther) {return stageOther == stage;});
+			std::string postfix;
+			if(stage == prosper::ShaderStage::Fragment)
+				postfix = "_frag";
+			else if(stage == prosper::ShaderStage::Vertex)
+				postfix = "_vert";
+			auto f = FileManager::OpenFile<VFilePtrReal>(("shader_error" +postfix +".txt").c_str(),"wb");
+			if(f)
+			{
+				f->WriteString(glslCodePerStage.at(it -glslCodeStages.begin()));
+				f = nullptr;
+			}
+		}
+	}
+#endif
+	return true;
 }
 
 /////////////
@@ -375,7 +446,7 @@ prosper::MemoryRequirements prosper::GLContext::GetMemoryRequirements(IImage &im
 	{
 		GLint size = 0;
 		if(compressedFormat)
-			glGetTexLevelParameteriv(GL_TEXTURE_2D,i,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
+			glGetTextureLevelParameteriv(static_cast<GLImage&>(img).GetGLImage(),i,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
 		else
 		{
 			auto width = img.GetWidth(i);
@@ -394,15 +465,20 @@ uint64_t prosper::GLContext::ClampDeviceMemorySize(uint64_t size,float percentag
 }
 prosper::DeviceSize prosper::GLContext::CalcBufferAlignment(BufferUsageFlags usageFlags)
 {
-	return 0; // TODO
+	GLint bufferOffsetAlignment = 0;
+	if(umath::is_flag_set(usageFlags,BufferUsageFlags::UniformBufferBit))
+		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,&bufferOffsetAlignment);
+	return bufferOffsetAlignment;
 }
 
-void prosper::GLContext::GetGLSLDefinitions(GLSLDefinitions &outDef) const
+void prosper::GLContext::GetGLSLDefinitions(glsl::Definitions &outDef) const
 {
-	outDef.layoutIdBuffer = "binding = (setIndex *10 +bindingIndex +1)";
-	outDef.layoutIdImage = "binding = (setIndex *10 +bindingIndex +1)";
+	outDef.layoutId = "binding = (setIndex *10 +bindingIndex +1)";
 	outDef.layoutPushConstants = "std140, binding = 0"; // Index 0 is reserved for push constants
 	outDef.vertexIndex = "gl_VertexID";
+	outDef.instanceIndex = "gl_InstanceID";
+	// Matrix for converting depth range and y-axis inversion
+	outDef.apiCoordTransform = "mat4(1,0,0,0,0,-1,0,0,0,0,0.5,0,0,0,0.5,1) *T";
 }
 
 bool prosper::GLContext::SavePipelineCache()
@@ -423,8 +499,27 @@ void prosper::GLContext::SubmitCommandBuffer(prosper::ICommandBuffer &cmd,prospe
 
 }
 
+prosper::PipelineID prosper::GLContext::AddPipeline(prosper::Shader &shader,PipelineID shaderPipelineId,std::shared_ptr<GLShaderProgram> program)
+{
+	PipelineID pipelineId;
+	if(m_freePipelineIndices.empty() == false)
+	{
+		auto idx = m_freePipelineIndices.front();
+		m_freePipelineIndices.pop();
+		m_pipelines.at(idx).program = program;
+		pipelineId = idx;
+	}
+	else
+	{
+		m_pipelines.push_back({});
+		m_pipelines.back().program = program;
+		pipelineId = m_pipelines.size() -1;
+	}
+	InitShaderPipeline(shader,pipelineId,shaderPipelineId);
+	return pipelineId;
+}
 std::optional<prosper::PipelineID> prosper::GLContext::AddPipeline(
-	const prosper::ComputePipelineCreateInfo &createInfo,
+	prosper::Shader &shader,PipelineID shaderPipelineId,const prosper::ComputePipelineCreateInfo &createInfo,
 	prosper::ShaderStageData &stage,PipelineID basePipelineId
 )
 {
@@ -438,12 +533,11 @@ std::optional<prosper::PipelineID> prosper::GLContext::AddPipeline(
 		ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit,err);
 		return false;
 	}
-	m_pipelines.push_back(program);
-	return m_pipelines.size() -1;
+	return AddPipeline(shader,shaderPipelineId,program);
 }
 std::optional<prosper::PipelineID> prosper::GLContext::AddPipeline(
-	const prosper::GraphicsPipelineCreateInfo &createInfo,
-	IRenderPass &rp,
+	prosper::Shader &shader,PipelineID shaderPipelineId,
+	const prosper::GraphicsPipelineCreateInfo &createInfo,IRenderPass &rp,
 	prosper::ShaderStageData *shaderStageFs,
 	prosper::ShaderStageData *shaderStageVs,
 	prosper::ShaderStageData *shaderStageGs,
@@ -468,25 +562,69 @@ std::optional<prosper::PipelineID> prosper::GLContext::AddPipeline(
 	if(program->Link(err) == false)
 	{
 		ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit,err);
-		return false;
+		return {};
 	}
-	if(m_freePipelineIndices.empty() == false)
+	return AddPipeline(shader,shaderPipelineId,program);
+}
+
+std::optional<uint32_t> prosper::GLContext::ShaderPipelineDescSetBindingIndexToBindingPoint(PipelineID pipelineId,uint32_t setIdx,uint32_t bindingIdx) const
+{
+	if(pipelineId >= m_pipelines.size())
+		return {};
+	auto &pipelineData = m_pipelines.at(pipelineId);
+	if(setIdx >= pipelineData.descriptorSetBindingsToBindingPoints.size())
+		return {};
+	auto &bindingPoints = pipelineData.descriptorSetBindingsToBindingPoints.at(setIdx);
+	return (bindingIdx < bindingPoints.size()) ? bindingPoints.at(bindingIdx) : std::optional<uint32_t>{};
+}
+
+void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader,PipelineID pipelineId,PipelineID shaderPipelineId)
+{
+	auto &pipelineInfo = *shader.GetPipelineInfo(shaderPipelineId);
+	auto &pipelineData = m_pipelines.at(pipelineId);
+	uint32_t bufferBindingPoint = 1; // 0 is reserved for push constants
+	uint32_t imageBindingPoint = 0;
+	pipelineData.descriptorSetBindingsToBindingPoints.reserve(pipelineInfo.descSetInfos.size());
+	for(auto &dsCreateInfo : pipelineInfo.descSetInfos)
 	{
-		auto idx = m_freePipelineIndices.front();
-		m_freePipelineIndices.pop();
-		m_pipelines.at(idx) = program;
-		return idx;
+		pipelineData.descriptorSetBindingsToBindingPoints.push_back({});
+		auto &dsBindingsToBindingPoints = pipelineData.descriptorSetBindingsToBindingPoints.back();
+		auto numBindings = dsCreateInfo->GetBindingCount();
+		dsBindingsToBindingPoints.resize(numBindings,std::numeric_limits<uint32_t>::max());
+		for(auto i=decltype(numBindings){0u};i<numBindings;++i)
+		{
+			prosper::DescriptorType descType;
+			uint32_t arraySize = 0;
+			if(dsCreateInfo->GetBindingPropertiesByBindingIndex(
+					i,&descType,&arraySize
+				) == false)
+				continue;
+			arraySize = umath::max(arraySize,static_cast<uint32_t>(1));
+			switch(descType)
+			{
+			case prosper::DescriptorType::Sampler:
+			case prosper::DescriptorType::CombinedImageSampler:
+			case prosper::DescriptorType::SampledImage:
+			case prosper::DescriptorType::StorageImage:
+				dsBindingsToBindingPoints.at(i) = imageBindingPoint;
+				imageBindingPoint += arraySize;
+				break;
+			default:
+				dsBindingsToBindingPoints.at(i) = bufferBindingPoint;
+				bufferBindingPoint += arraySize;
+				break;
+			}
+		}
 	}
-	m_pipelines.push_back(program);
-	return m_pipelines.size() -1;
 }
 
 bool prosper::GLContext::ClearPipeline(bool graphicsShader,PipelineID pipelineId)
 {
-	m_pipelines.at(pipelineId) = nullptr;
+	m_pipelines.at(pipelineId) = {};
 	m_freePipelineIndices.push(pipelineId);
 	return true;
 }
+uint32_t prosper::GLContext::GetLastAcquiredSwapchainImageIndex() const {return 0;}
 
 prosper::Result prosper::GLContext::WaitForFence(const IFence &fence,uint64_t timeout) const
 {
@@ -553,14 +691,19 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
 	IPrContext::Initialize(createInfo);
 	m_hShaderClear = m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
+	m_hShaderBlit = m_shaderManager->RegisterShader("blit_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderBlit(context,identifier);});
 }
 prosper::ShaderClear *prosper::GLContext::GetClearShader() const {return static_cast<prosper::ShaderClear*>(m_hShaderClear.get());}
+prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle() {glFinish();}
 void prosper::GLContext::DoFlushSetupCommandBuffer()
 {
-
+	if(m_setupCmdBuffer == nullptr)
+		return;
+	glFinish();
+	m_setupCmdBuffer = nullptr;
 }
 void prosper::GLContext::ReloadSwapchain()
 {
@@ -577,6 +720,59 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		exit(EXIT_FAILURE);
 	}
+
+	if(IsValidationEnabled())
+	{
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback([](GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam) -> void {
+			if(severity == GL_DEBUG_SEVERITY_NOTIFICATION || severity == GL_DEBUG_SEVERITY_LOW)
+				return;
+			// See https://www.khronos.org/opengl/wiki/Debug_Output
+			auto *context = static_cast<const GLContext*>(userParam);
+			std::string strSource;
+			switch(source)
+			{
+			case GL_DEBUG_SOURCE_API:
+				strSource = "OpenGL API";
+				break;
+			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+				strSource = "Window-system API";
+				break;
+			case GL_DEBUG_SOURCE_SHADER_COMPILER:
+				strSource = "Shader compiler";
+				break;
+			case GL_DEBUG_SOURCE_THIRD_PARTY:
+				strSource = "Third-party";
+				break;
+			case GL_DEBUG_SOURCE_APPLICATION:
+				strSource = "Source application";
+				break;
+			case GL_DEBUG_SOURCE_OTHER:
+			default:
+				strSource = "Unknown";
+				break;
+			}
+			auto prosperSeverity = prosper::DebugMessageSeverityFlags::None;
+			switch(severity)
+			{
+			case GL_DEBUG_SEVERITY_NOTIFICATION:
+			case GL_DEBUG_SEVERITY_LOW:
+				prosperSeverity |= prosper::DebugMessageSeverityFlags::InfoBit;
+				break;
+			case GL_DEBUG_SEVERITY_MEDIUM:
+				prosperSeverity |= prosper::DebugMessageSeverityFlags::WarningBit;
+				break;
+			case GL_DEBUG_SEVERITY_HIGH:
+				prosperSeverity |= prosper::DebugMessageSeverityFlags::ErrorBit;
+				break;
+			}
+			std::string strMsg {message,static_cast<uint64_t>(length)};
+			strMsg = "Source: " +strSource +'\n' +strMsg;
+			const_cast<GLContext*>(context)->ValidationCallback(prosperSeverity,strMsg);
+			},this);
+	}
+
 	m_shaderManager = std::make_unique<ShaderManager>(*this);
 	InitPushConstantBuffer();
 	InitTemporaryBuffer();
@@ -596,7 +792,7 @@ void prosper::GLContext::InitSwapchainImages()
 	imgCreateInfo.tiling = prosper::ImageTiling::Optimal;
 	imgCreateInfo.usage = prosper::ImageUsageFlags::TransferDstBit;
 	imgCreateInfo.flags = util::ImageCreateInfo::Flags::DontAllocateMemory;
-	auto img = std::shared_ptr<GLImage>{new GLImage{*this,imgCreateInfo,0}};
+	auto img = std::shared_ptr<GLImage>{new GLImage{*this,imgCreateInfo,0,GL_RGBA}};
 	m_swapchainImages = {img};
 
 	prosper::util::ImageViewCreateInfo imgViewCreateInfo {};
@@ -643,13 +839,14 @@ std::shared_ptr<prosper::IBuffer> prosper::GLContext::CreateBuffer(const prosper
 		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) == false)
 			flags |= GL_MAP_WRITE_BIT;
 		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::HostCoherent))
-			flags |= GL_MAP_COHERENT_BIT;
+			flags |= GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT;
 		if(umath::is_flag_set(createInfo.flags,util::BufferCreateInfo::Flags::Persistent))
 			flags |= GL_MAP_PERSISTENT_BIT;
 		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::HostCached) && umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::DeviceLocal) == false)
 			flags |= GL_CLIENT_STORAGE_BIT;
 		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::HostAccessable))
 			flags |= GL_MAP_READ_BIT | GL_DYNAMIC_STORAGE_BIT;
+		flags |= GL_DYNAMIC_STORAGE_BIT; // TODO: Only set this flag if we really need it (Let user specify?)
 		glNamedBufferStorage(buf,createInfo.size,data,flags);
 	}
 	return GLBuffer::Create(*this,createInfo,0,buf);
@@ -688,9 +885,10 @@ std::shared_ptr<prosper::IEvent> prosper::GLContext::CreateEvent()
 }
 std::shared_ptr<prosper::IFence> prosper::GLContext::CreateFence(bool createSignalled)
 {
-	throw std::runtime_error{"TODO"};
-	auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
-	return GLFence::Create(*this,fence);
+	return nullptr; // TODO
+	//throw std::runtime_error{"TODO"};
+	//auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+	//return GLFence::Create(*this,fence);
 }
 std::shared_ptr<prosper::ISampler> prosper::GLContext::CreateSampler(const prosper::util::SamplerCreateInfo &createInfo)
 {
@@ -704,9 +902,9 @@ std::shared_ptr<prosper::IImageView> prosper::GLContext::DoCreateImageView(
 {
 	return GLImageView::Create(*this,img,createInfo,imgViewType,aspectMask);
 }
-std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const prosper::util::ImageCreateInfo &createInfo,const uint8_t *data)
+std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const prosper::util::ImageCreateInfo &createInfo,const ImageData &imgData)
 {
-	return GLImage::Create(*this,createInfo);
+	return GLImage::Create(*this,createInfo,imgData);
 }
 std::shared_ptr<prosper::IRenderPass> prosper::GLContext::CreateRenderPass(const prosper::util::RenderPassCreateInfo &renderPassInfo)
 {

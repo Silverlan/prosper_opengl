@@ -22,6 +22,8 @@ namespace prosper
 			uint64_t bufferInstanceSize,
 			uint64_t alignedBufferBaseSize,uint64_t maxTotalSize,uint32_t alignment
 		);
+	protected:
+		virtual void MoveInternalBuffer(IBuffer &other) override;
 	};
 };
 

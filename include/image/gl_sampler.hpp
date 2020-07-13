@@ -17,6 +17,7 @@ namespace prosper
 	public:
 		static std::shared_ptr<ISampler> Create(IPrContext &context,const util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler);
 
+		GLuint GetGLSampler() const;
 		virtual ~GLSampler() override;
 	private:
 		GLSampler(IPrContext &context,const util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler);

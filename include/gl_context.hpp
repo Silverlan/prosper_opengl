@@ -16,6 +16,7 @@ class GLShaderProgram;
 namespace prosper
 {
 	class ShaderClear;
+	class ShaderBlit;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
 	class DLLPROSPER_GL GLContext
@@ -32,6 +33,7 @@ namespace prosper
 		virtual util::Limits GetPhysicalDeviceLimits() const override;
 		virtual std::optional<util::PhysicalDeviceImageFormatProperties> GetPhysicalDeviceImageFormatProperties(const ImageFormatPropertiesQuery &query) override;
 		virtual ~GLContext() override;
+		virtual std::string GetAPIIdentifier() const override {return "OpenGL";}
 
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
@@ -43,7 +45,7 @@ namespace prosper
 		virtual uint64_t ClampDeviceMemorySize(uint64_t size,float percentageOfGPUMemory,MemoryFeatureFlags featureFlags) const override;
 		virtual DeviceSize CalcBufferAlignment(BufferUsageFlags usageFlags) override;
 
-		virtual void GetGLSLDefinitions(GLSLDefinitions &outDef) const override;
+		virtual void GetGLSLDefinitions(glsl::Definitions &outDef) const override;
 
 		virtual bool SavePipelineCache() override;
 
@@ -56,7 +58,7 @@ namespace prosper
 			util::BufferCreateInfo createInfo,
 			uint64_t maxTotalSize,float clampSizeToAvailableGPUMemoryPercentage=1.f,const void *data=nullptr
 		) override;
-		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo,const uint8_t *data=nullptr) override;
+		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo,const ImageData &imgData={}) override;
 
 		virtual Result WaitForFence(const IFence &fence,uint64_t timeout=std::numeric_limits<uint64_t>::max()) const override;
 		virtual Result WaitForFences(const std::vector<IFence*> &fences,bool waitAll=true,uint64_t timeout=std::numeric_limits<uint64_t>::max()) const override;
@@ -67,13 +69,15 @@ namespace prosper
 			const std::string &entrypointName="main"
 		) override;
 		virtual std::shared_ptr<ShaderStageProgram> CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload=false) override;
+		std::optional<std::string> CompileShaders(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog) const;
+		virtual bool InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const override;
 		virtual std::optional<PipelineID> AddPipeline(
-			const prosper::ComputePipelineCreateInfo &createInfo,
+			prosper::Shader &shader,PipelineID shaderPipelineId,const prosper::ComputePipelineCreateInfo &createInfo,
 			prosper::ShaderStageData &stage,PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
 		) override;
 		virtual std::optional<PipelineID> AddPipeline(
-			const prosper::GraphicsPipelineCreateInfo &createInfo,
-			IRenderPass &rp,
+			prosper::Shader &shader,PipelineID shaderPipelineId,
+			const prosper::GraphicsPipelineCreateInfo &createInfo,IRenderPass &rp,
 			prosper::ShaderStageData *shaderStageFs=nullptr,
 			prosper::ShaderStageData *shaderStageVs=nullptr,
 			prosper::ShaderStageData *shaderStageGs=nullptr,
@@ -83,6 +87,7 @@ namespace prosper
 			PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
 		) override;
 		virtual bool ClearPipeline(bool graphicsShader,PipelineID pipelineId) override;
+		virtual uint32_t GetLastAcquiredSwapchainImageIndex() const override;
 
 		virtual std::shared_ptr<prosper::IQueryPool> CreateQueryPool(QueryType queryType,uint32_t maxConcurrentQueries) override;
 		virtual std::shared_ptr<prosper::IQueryPool> CreateQueryPool(QueryPipelineStatisticFlags statsFlags,uint32_t maxConcurrentQueries) override;
@@ -95,6 +100,7 @@ namespace prosper
 		virtual bool Submit(ICommandBuffer &cmdBuf,bool shouldBlock=false,IFence *optFence=nullptr) override;
 		virtual void Initialize(const CreateInfo &createInfo) override;
 		ShaderClear *GetClearShader() const;
+		ShaderBlit *GetBlitShader() const;
 
 		virtual std::shared_ptr<IEvent> CreateEvent() override;
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled=false) override;
@@ -106,6 +112,7 @@ namespace prosper
 		bool CheckResult();
 		GLBuffer &GetPushConstantBuffer() const;
 		std::optional<GLuint> GetPipelineProgram(PipelineID pipelineId) const;
+		std::optional<uint32_t> ShaderPipelineDescSetBindingIndexToBindingPoint(PipelineID pipelineId,uint32_t setIdx,uint32_t bindingIdx) const;
 	protected:
 		GLContext(const std::string &appName,bool bEnableValidation=false);
 		void InitWindow();
@@ -126,10 +133,18 @@ namespace prosper
 		virtual void InitAPI(const CreateInfo &createInfo) override;
 		void InitSwapchainImages();
 		void InitPushConstantBuffer();
+		void InitShaderPipeline(prosper::Shader &shader,PipelineID pipelineId,PipelineID shaderPipelineId);
 	private:
+		PipelineID AddPipeline(prosper::Shader &shader,PipelineID shaderPipelineId,std::shared_ptr<GLShaderProgram> program);
+		struct PipelineData
+		{
+			std::shared_ptr<GLShaderProgram> program = nullptr;
+			std::vector<std::vector<uint32_t>> descriptorSetBindingsToBindingPoints {};
+		};
 		::util::WeakHandle<Shader> m_hShaderClear {};
+		::util::WeakHandle<Shader> m_hShaderBlit {};
 		std::shared_ptr<IBuffer> m_pushConstantBuffer = nullptr;
-		std::vector<std::shared_ptr<GLShaderProgram>> m_pipelines = {};
+		std::vector<PipelineData> m_pipelines = {};
 		std::queue<size_t> m_freePipelineIndices {};
 		std::vector<std::shared_ptr<prosper::IFramebuffer>> m_swapchainFramebuffers {};
 	};
