@@ -9,9 +9,13 @@
 using namespace prosper;
 
 #pragma optimize("",off)
-std::shared_ptr<IBuffer> GLBuffer::Create(IPrContext &context,const prosper::util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx)
+std::shared_ptr<IBuffer> GLBuffer::Create(IPrContext &context,const prosper::util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx,const std::function<void(IBuffer&)> &onDestroyedCallback)
 {
-	return std::shared_ptr<GLBuffer>{new GLBuffer{context,bufCreateInfo,startOffset,bufCreateInfo.size,bufIdx}};
+	return std::shared_ptr<GLBuffer>{new GLBuffer{context,bufCreateInfo,startOffset,bufCreateInfo.size,bufIdx},[onDestroyedCallback](GLBuffer *buf) {
+		if(onDestroyedCallback)
+			onDestroyedCallback(*buf);
+		delete buf;
+	}};
 }
 GLBuffer::GLBuffer(IPrContext &context,const prosper::util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,DeviceSize size,GLuint bufIdx)
 	: IBuffer{context,bufCreateInfo,startOffset,size},m_buffer{bufIdx}
@@ -20,7 +24,7 @@ std::shared_ptr<IBuffer> GLBuffer::CreateSubBuffer(DeviceSize offset,DeviceSize 
 {
 	auto subBufferCreateInfo = m_createInfo;
 	subBufferCreateInfo.size = size;
-	auto subBuffer = Create(GetContext(),subBufferCreateInfo,(m_parent ? m_parent->GetStartOffset() : 0ull) +offset,m_buffer);
+	auto subBuffer = Create(GetContext(),subBufferCreateInfo,(m_parent ? m_parent->GetStartOffset() : 0ull) +offset,m_buffer,onDestroyedCallback);
 	dynamic_cast<GLBuffer*>(subBuffer.get())->SetParent(*this);
 	return subBuffer;
 }

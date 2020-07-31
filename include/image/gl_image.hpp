@@ -28,7 +28,7 @@ namespace prosper
 		virtual bool Unmap() override;
 		virtual const void *GetInternalHandle() const override;
 		uint64_t GetLayerSize(uint32_t w,uint32_t h) const;
-		bool WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data);
+		virtual bool WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data) override;
 		GLenum GetBufferBit() const;
 		GLenum GetImageType() const;
 		GLenum GetImageType(uint32_t layerIndex) const;
@@ -40,10 +40,12 @@ namespace prosper
 		friend GLContext;
 		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo,GLuint texture,GLenum pixelFormat);
 		virtual bool DoSetMemoryBuffer(IBuffer &buffer) override;
+		void InitializeSubresourceLayouts();
 		GLuint m_image = GL_INVALID_VALUE;
 		GLenum m_pixelDataFormat;
 
 		std::vector<std::shared_ptr<GLFramebuffer>> m_framebuffers;
+		std::vector<std::vector<prosper::util::SubresourceLayout>> m_subresourceLayouts {};
 	};
 };
 

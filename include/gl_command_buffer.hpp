@@ -62,10 +62,16 @@ namespace prosper
 		virtual bool RecordEndOcclusionQuery(const OcclusionQuery &query) const override;
 		virtual bool WriteTimestampQuery(const TimestampQuery &query) const override;
 		virtual bool ResetQuery(const Query &query) const override;
+		virtual bool RecordPresentImage(IImage &img,uint32_t swapchainImgIndex) override;
 
 		GLContext &GetContext() const;
 	protected:
 		GLCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		void CheckViewportAndScissorBounds() const;
+		void SetViewport(GLint x,GLint y,GLint w,GLint h);
+		void SetScissor(GLint x,GLint y,GLint w,GLint h);
+		void ApplyViewport();
+		void ApplyScissor();
 		virtual void ClearBoundPipeline() override;
 		virtual bool DoRecordBindShaderPipeline(prosper::Shader &shader,PipelineID shaderPipelineId,PipelineID pipelineId) override;
 		virtual bool DoRecordCopyBuffer(const util::BufferCopy &copyInfo,IBuffer &bufferSrc,IBuffer &bufferDst) override;
@@ -91,6 +97,9 @@ namespace prosper
 			IndexType indexType = IndexType::UInt16;
 			DeviceSize offset = 0;
 		} m_boundIndexBufferData {};
+
+		std::array<int32_t,4> m_viewport {};
+		std::array<int32_t,4> m_scissor {};
 	};
 
 	class DLLPROSPER_GL GLPrimaryCommandBuffer

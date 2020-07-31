@@ -24,6 +24,7 @@ namespace prosper
 
 		virtual ~GLFramebuffer() override;
 		GLuint GetGLFramebuffer() const {return m_framebuffer;}
+		virtual const void *GetInternalHandle() const override;
 	private:
 		GLFramebuffer(
 			IPrContext &context,const std::vector<std::shared_ptr<IImageView>> &attachments,

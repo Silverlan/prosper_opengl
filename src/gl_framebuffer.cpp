@@ -71,4 +71,5 @@ GLFramebuffer::~GLFramebuffer()
 	if(m_framebuffer != 0)
 		glDeleteFramebuffers(1,&m_framebuffer);
 }
+const void *GLFramebuffer::GetInternalHandle() const {return reinterpret_cast<void*>(m_framebuffer);}
 #pragma optimize("",on)

@@ -174,6 +174,83 @@ GLenum prosper::util::to_opengl_enum(prosper::IndexType indexType)
 	return 0;
 }
 
+GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboolean &outNormalized)
+{
+	outNormalized = GL_FALSE;
+	switch(format)
+	{
+	case prosper::Format::R8_UNorm:
+	case prosper::Format::R8G8_UNorm:
+	case prosper::Format::R8G8B8_UNorm_PoorCoverage:
+	case prosper::Format::B8G8R8_UNorm_PoorCoverage:
+	case prosper::Format::R8G8B8A8_UNorm:
+	case prosper::Format::B8G8R8A8_UNorm:
+		outNormalized = GL_TRUE;
+	case prosper::Format::R8_UInt:
+	case prosper::Format::R8G8_UInt:
+	case prosper::Format::R8G8B8_UInt_PoorCoverage:
+	case prosper::Format::R8G8B8A8_UInt:
+		return GL_UNSIGNED_BYTE;
+	case prosper::Format::R8_SNorm:
+	case prosper::Format::R8G8_SNorm:
+	case prosper::Format::R8G8B8A8_SNorm:
+		outNormalized = GL_TRUE;
+	case prosper::Format::B8G8R8_SInt_PoorCoverage:
+	case prosper::Format::B8G8R8A8_SInt:
+	case prosper::Format::R8_SInt:
+	case prosper::Format::R8G8_SInt:
+	case prosper::Format::R8G8B8_SInt_PoorCoverage:
+	case prosper::Format::R8G8B8A8_SInt:
+		return GL_BYTE;
+	case prosper::Format::R16_UNorm:
+	case prosper::Format::R16G16_UNorm:
+	case prosper::Format::R16G16B16_UNorm_PoorCoverage:
+	case prosper::Format::R16G16B16A16_UNorm:
+	case prosper::Format::D16_UNorm:
+		outNormalized = GL_TRUE;
+	case prosper::Format::R16_UInt:
+	case prosper::Format::R16G16_UInt:
+	case prosper::Format::R16G16B16_UInt_PoorCoverage:
+	case prosper::Format::R16G16B16A16_UInt:
+		return GL_UNSIGNED_SHORT;
+	case prosper::Format::R16_SNorm:
+	case prosper::Format::R16G16B16_SNorm_PoorCoverage:
+		outNormalized = GL_TRUE;
+	case prosper::Format::R16_SInt:
+	case prosper::Format::R16G16_SInt:
+	case prosper::Format::R16G16B16_SInt_PoorCoverage:
+	case prosper::Format::R16G16B16A16_SInt:
+		return GL_SHORT;
+	case prosper::Format::R32_SInt:
+	case prosper::Format::R32G32_SInt:
+	case prosper::Format::R32G32B32_SInt:
+	case prosper::Format::R32G32B32A32_SInt:
+		return GL_INT;
+	case prosper::Format::R32_UInt:
+	case prosper::Format::R32G32_UInt:
+	case prosper::Format::R32G32B32_UInt:
+	case prosper::Format::R32G32B32A32_UInt:
+		return GL_UNSIGNED_INT;
+	case prosper::Format::R32_SFloat:
+	case prosper::Format::R32G32_SFloat:
+	case prosper::Format::R32G32B32_SFloat:
+	case prosper::Format::R32G32B32A32_SFloat:
+	case prosper::Format::D32_SFloat:
+		return GL_FLOAT;
+	case prosper::Format::R16_SFloat:
+	case prosper::Format::R16G16_SFloat:
+	case prosper::Format::R16G16B16_SFloat_PoorCoverage:
+	case prosper::Format::R16G16B16A16_SFloat:
+		return GL_HALF_FLOAT;
+	case prosper::Format::R64_SFloat_PoorCoverage:
+	case prosper::Format::R64G64_SFloat_PoorCoverage:
+	case prosper::Format::R64G64B64_SFloat_PoorCoverage:
+	case prosper::Format::R64G64B64A64_SFloat_PoorCoverage:
+		return GL_DOUBLE;
+	}
+	throw std::logic_error{"Unsupported format!"};
+}
+
 GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optOutPixelDataFormat)
 {
 	switch(format)

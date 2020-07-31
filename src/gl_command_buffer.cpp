@@ -11,6 +11,7 @@
 #include "shader/prosper_shader.hpp"
 #include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
+#include "shader/gl_shader_flip_y.hpp"
 #include "gl_render_pass.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
@@ -20,6 +21,7 @@
 #include "gl_util.hpp"
 #include <assert.h>
 #pragma optimize("",off)
+static const auto SCISSOR_FLIP_Y = false;
 prosper::GLCommandBuffer::~GLCommandBuffer()
 {
 
@@ -27,11 +29,11 @@ prosper::GLCommandBuffer::~GLCommandBuffer()
 
 bool prosper::GLCommandBuffer::Reset(bool shouldReleaseResources) const
 {
-	return false; // TODO
+	return true; // TODO
 }
 bool prosper::GLCommandBuffer::StopRecording() const
 {
-	return false; // TODO
+	return true; // TODO
 }
 
 bool prosper::GLCommandBuffer::RecordBindIndexBuffer(IBuffer &buf,IndexType indexType,DeviceSize offset)
@@ -73,30 +75,78 @@ bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGrap
 		uint32_t bindingIndex = 0;
 		uint32_t numAttributes;
 		const prosper::VertexInputAttribute *attrs;
-		createInfo.GetVertexBindingProperties(startBinding +i,&bindingIndex,&stride,nullptr,&numAttributes,&attrs);
+		prosper::VertexInputRate rate;
+		createInfo.GetVertexBindingProperties(startBinding +i,&bindingIndex,&stride,&rate,&numAttributes,&attrs);
 		glStrides.push_back(stride);
 		for(auto attrId=decltype(numAttributes){0u};attrId<numAttributes;++attrId)
 		{
 			auto &attr = attrs[attrId];
+
+			GLboolean normalized = GL_FALSE;
+			auto type = util::to_opengl_image_format_type(attr.format,normalized);
+			auto numComponents = util::get_component_count(attr.format);
+
 			// TODO: Use VAOs instead
 			glEnableVertexAttribArray(absAttrId);
 			glBindBuffer(GL_ARRAY_BUFFER,dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
 			int32_t offset = buf->GetStartOffset() +attr.offsetInBytes;
-			glVertexAttribPointer(
-				absAttrId++, // Attribute index
-				prosper::util::get_byte_size(attr.format) /sizeof(float), // Size
-				GL_FLOAT, // Type
-				GL_FALSE, // Normalized
-				stride, // Stride
-				(void*)offset // Offset
-			);
+			switch(type)
+			{
+			case GL_UNSIGNED_BYTE:
+			case GL_BYTE:
+			case GL_UNSIGNED_SHORT:
+			case GL_SHORT:
+			case GL_INT:
+			case GL_UNSIGNED_INT:
+				if(normalized == GL_FALSE)
+				{
+					glVertexAttribIPointer(
+						absAttrId, // Attribute index
+						numComponents, // Size
+						type, // Type
+						stride, // Stride
+						(void*)offset // Offset
+					);
+					break;
+				}
+				// No break on purpose!
+			case GL_FLOAT:
+			case GL_HALF_FLOAT:
+				glVertexAttribPointer(
+					absAttrId, // Attribute index
+					numComponents, // Size
+					type, // Type
+					normalized, // Normalized
+					stride, // Stride
+					(void*)offset // Offset
+				);
+				break;
+			case GL_DOUBLE:
+				glVertexAttribLPointer(
+					absAttrId, // Attribute index
+					numComponents, // Size
+					type, // Type
+					stride, // Stride
+					(void*)offset // Offset
+				);
+				break;
+			}
+			switch(rate)
+			{
+			case prosper::VertexInputRate::Vertex:
+				glVertexAttribDivisor(absAttrId,0);
+				break;
+			case prosper::VertexInputRate::Instance:
+				glVertexAttribDivisor(absAttrId,1);
+				break;
+			}
+			++absAttrId;
 			if(absAttrId >= m_boundPipelineData.vertexBuffers.size())
 				m_boundPipelineData.vertexBuffers.resize(absAttrId +1);
 			m_boundPipelineData.vertexBuffers.at(absAttrId) = buf;
 		}
 	}
 	m_boundPipelineData.numVertexAttribBindings = umath::max(absAttrId,m_boundPipelineData.numVertexAttribBindings);
-	//glBindVertexBuffers(startBinding,numBuffers,glBuffers.data(),glOffsets.data(),glStrides.data());
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordDispatchIndirect(prosper::IBuffer &buffer,DeviceSize size)
@@ -110,10 +160,32 @@ bool prosper::GLCommandBuffer::RecordDispatch(uint32_t x,uint32_t y,uint32_t z)
 	glDispatchCompute(x,y,z);
 	return GetContext().CheckResult();
 }
+void prosper::GLCommandBuffer::CheckViewportAndScissorBounds() const
+{
+	if(GetContext().IsValidationEnabled() == false)
+		return;
+	std::array<GLint,4> viewport {};
+	glGetIntegerv(GL_VIEWPORT,viewport.data());
+	if(viewport != m_viewport)
+		GetContext().ValidationCallback(DebugMessageSeverityFlags::WarningBit,"Currently assigned viewport bounds do not match expected viewport bounds!");
+
+	GLboolean scissorTest = GL_FALSE;
+	glGetBooleanv(GL_SCISSOR_TEST,&scissorTest);
+	if(scissorTest == GL_TRUE)
+	{
+		std::array<GLint,4> scissorBox {};
+		glGetIntegerv(GL_SCISSOR_BOX,scissorBox.data());
+		if constexpr(SCISSOR_FLIP_Y)
+			scissorBox.at(1) = GetContext().GetWindowHeight() -scissorBox.at(1) -scissorBox.at(3); // y is flipped
+		if(scissorBox != m_scissor)
+			GetContext().ValidationCallback(DebugMessageSeverityFlags::WarningBit,"Currently assigned scissor bounds do not match expected scissor bounds!");
+	}
+}
 bool prosper::GLCommandBuffer::RecordDraw(uint32_t vertCount,uint32_t instanceCount,uint32_t firstVertex,uint32_t firstInstance)
 {
 	if(m_boundPipelineData.shader.expired() || m_boundPipelineData.pipelineId.has_value() == false || m_boundPipelineData.shader->IsGraphicsShader() == false)
 		return false;
+	CheckViewportAndScissorBounds();
 	auto &pipelineCreateInfo = *static_cast<prosper::GraphicsPipelineCreateInfo*>(static_cast<ShaderGraphics*>(m_boundPipelineData.shader.get())->GetPipelineCreateInfo(*m_boundPipelineData.shaderPipelineId));
 	auto glTopology = prosper::util::to_opengl_enum(pipelineCreateInfo.GetPrimitiveTopology());
 	glDrawArraysInstancedBaseInstance(glTopology,firstVertex,vertCount,instanceCount,firstInstance);
@@ -123,6 +195,7 @@ bool prosper::GLCommandBuffer::RecordDrawIndexed(uint32_t indexCount,uint32_t in
 {
 	if(m_boundPipelineData.shader.expired() || m_boundPipelineData.pipelineId.has_value() == false || m_boundPipelineData.shader->IsGraphicsShader() == false)
 		return false;
+	CheckViewportAndScissorBounds();
 	GetContext().CheckResult();
 	auto &pipelineCreateInfo = *static_cast<prosper::GraphicsPipelineCreateInfo*>(static_cast<ShaderGraphics*>(m_boundPipelineData.shader.get())->GetPipelineCreateInfo(*m_boundPipelineData.shaderPipelineId));
 	auto glTopology = prosper::util::to_opengl_enum(pipelineCreateInfo.GetPrimitiveTopology());
@@ -202,6 +275,10 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,static_cast<prosper::GLFramebuffer&>(*framebuffer).GetGLFramebuffer());
 	if(depth == false)
 	{
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+
 		glClearColor(clearColor.at(0),clearColor.at(1),clearColor.at(2),clearColor.at(3));
 		context.CheckResult();
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -209,6 +286,10 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 	}
 	else
 	{
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDepthMask(GL_TRUE);
+
 		GLboolean depthWritesEnabled;
 		glGetBooleanv(GL_DEPTH_WRITEMASK,&depthWritesEnabled);
 		glDepthMask(GL_TRUE);
@@ -398,6 +479,54 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 		else
 			glDisable(GL_BLEND);
 
+		auto useScissor = false;
+		auto numDynamicScissors = createInfo->GetDynamicScissorBoxesCount();
+		if(numDynamicScissors > 0)
+		{
+			glEnable(GL_SCISSOR_TEST);
+			useScissor = true;
+		}
+		else
+		{
+			int32_t scissorX,scissorY;
+			uint32_t scissorW,scissorH;
+			if(createInfo->GetScissorBoxesCount() > 0 && createInfo->GetScissorBoxProperties(0,&scissorX,&scissorY,&scissorW,&scissorH))
+			{
+				glEnable(GL_SCISSOR_TEST);
+				useScissor = true;
+				SetScissor(scissorX,scissorY,scissorW,scissorH);
+			}
+			else
+				glDisable(GL_SCISSOR_TEST);
+		}
+
+		auto customViewport = false;
+		auto numDynamicViewports = createInfo->GetDynamicViewportsCount();
+		if(numDynamicViewports == 0)
+		{
+			float viewportX,viewportY,viewportW,viewportH;
+			float minDepth,maxDepth;
+			if(createInfo->GetViewportCount() > 0 && createInfo->GetViewportProperties(0,&viewportX,&viewportY,&viewportW,&viewportH,&minDepth,&maxDepth))
+			{
+				customViewport = true;
+				SetViewport(viewportX,viewportY,viewportW,viewportH);
+				glDepthRangef(minDepth,maxDepth);
+			}
+		}
+		else
+			customViewport = true;
+
+		if(customViewport == false)
+		{
+			GLint viewportDims;
+			glGetIntegerv(GL_MAX_VIEWPORT_DIMS,&viewportDims); // TODO: Query this at context creation time
+			SetViewport(0,0,viewportDims,viewportDims);
+			glDepthRangef(0.f,1.f);
+		}
+		// ApplyViewport();
+		// if(useScissor)
+		// 	ApplyScissor(); // Scissor has to be applied AFTER viewport!
+
 		bool isDepthTestEnabled;
 		prosper::CompareOp depthCompareOp;
 		createInfo->GetDepthTestState(&isDepthTestEnabled,&depthCompareOp);
@@ -430,15 +559,51 @@ bool prosper::GLCommandBuffer::RecordSetLineWidth(float lineWidth)
 	glLineWidth(lineWidth);
 	return GetContext().CheckResult();
 }
+void prosper::GLCommandBuffer::SetViewport(GLint x,GLint y,GLint w,GLint h)
+{
+	m_viewport = {x,y,w,h};
+	ApplyViewport();
+}
+void prosper::GLCommandBuffer::SetScissor(GLint x,GLint y,GLint w,GLint h)
+{
+	m_scissor = {x,y,w,h};
+	ApplyScissor();
+}
+void prosper::GLCommandBuffer::ApplyViewport()
+{
+	GLint vpX = m_viewport.at(0);
+	GLint vpY = m_viewport.at(1);
+	GLint vpW = m_viewport.at(2);
+	GLint vpH = m_viewport.at(3);
+	glViewport(vpX,vpY,vpW,vpH);
+}
+void prosper::GLCommandBuffer::ApplyScissor()
+{
+	GLint scX = m_scissor.at(0);
+	GLint scY = m_scissor.at(1);
+	GLint scW = m_scissor.at(2);
+	GLint scH = m_scissor.at(3);
+	if constexpr(SCISSOR_FLIP_Y)
+		scY = GetContext().GetWindowHeight() -scY -scH;
+	glScissor(scX,scY,scW,scH);
+}
 bool prosper::GLCommandBuffer::RecordSetViewport(uint32_t width,uint32_t height,uint32_t x,uint32_t y,float minDepth,float maxDepth)
 {
-	glViewport(x,y,width,height);
+	GLint vpX = x;
+	GLint vpY = y;
+	GLint vpW = width;
+	GLint vpH = height;
+	SetViewport(vpX,vpY,vpW,vpH);
 	glDepthRangef(minDepth,maxDepth);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordSetScissor(uint32_t width,uint32_t height,uint32_t x,uint32_t y)
 {
-	glScissor(x,y,width,height);
+	GLint scX = x;
+	GLint scY = y;
+	GLint scW = width;
+	GLint scH = height;
+	SetScissor(scX,scY,scW,scH);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordBeginPipelineStatisticsQuery(const PipelineStatisticsQuery &query) const
@@ -472,6 +637,30 @@ bool prosper::GLCommandBuffer::ResetQuery(const Query &query) const
 	return false; // TODO
 }
 
+bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,uint32_t swapchainImgIndex)
+{
+	auto &context = GetContext();
+	auto *shaderFlipY = context.GetFlipYShader();
+	if(shaderFlipY == nullptr)
+		return false;
+
+	GLint drawFboId = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0,context.GetSwapchainImage(swapchainImgIndex),context.GetSwapchainFramebuffer(swapchainImgIndex));
+	if(shaderFlipY->BeginDraw(std::dynamic_pointer_cast<prosper::IPrimaryCommandBuffer>(shared_from_this())))
+	{
+		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());
+		shaderFlipY->Draw();
+		shaderFlipY->EndDraw();
+	}
+
+	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,drawFboId);
+	return true;
+}
+
 prosper::GLContext &prosper::GLCommandBuffer::GetContext() const {return static_cast<GLContext&>(ICommandBuffer::GetContext());}
 
 prosper::GLCommandBuffer::GLCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
@@ -500,8 +689,10 @@ bool prosper::GLCommandBuffer::DoRecordCopyImage(const prosper::util::CopyInfo &
 	blitInfo.dstSubresourceLayer = copyInfo.dstSubresource;
 
 	std::array<Offset3D,2> srcOffsets {};
+	srcOffsets.at(0) = {blitInfo.offsetSrc.at(0),blitInfo.offsetSrc.at(1),0};
 	srcOffsets.at(1) = {static_cast<int32_t>(w),static_cast<int32_t>(h),0};
 	std::array<Offset3D,2> dstOffsets {};
+	dstOffsets.at(0) = {blitInfo.offsetDst.at(0),blitInfo.offsetDst.at(1),0};
 	dstOffsets.at(1) = {static_cast<int32_t>(w),static_cast<int32_t>(h),0};
 	return DoRecordBlitImage(blitInfo,imgSrc,imgDst,srcOffsets,dstOffsets);
 }
@@ -537,22 +728,27 @@ bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::Bu
 	auto &glImgDst = static_cast<GLImage&>(imgSrc);
 	auto format = imgSrc.GetFormat();
 
-	uint64_t size = 0;
+	static std::vector<uint8_t> pixelData {};
 	if(util::is_compressed_format(format))
 	{
-		GLint isize;
-		glGetTextureLevelParameteriv(glImgDst.GetGLImage(),copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&isize);
-		size = isize;
+		GLint size;
+		glGetTextureLevelParameteriv(glImgDst.GetGLImage(),copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
+
+		pixelData.resize(size);
+		glGetCompressedTextureSubImage(
+			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
+		);
 	}
 	else
-		size = w *h *util::get_byte_size(format) *copyInfo.layerCount;
-
-	static std::vector<uint8_t> pixelData {};
-	pixelData.resize(size);
-	glGetTextureSubImage(
-		glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,
-		glImgDst.GetPixelDataFormat(),GL_UNSIGNED_BYTE,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
-	);
+	{
+		auto size = w *h *util::get_byte_size(format) *copyInfo.layerCount;
+		pixelData.resize(size);
+		glGetTextureSubImage(
+			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,
+			glImgDst.GetPixelDataFormat(),GL_UNSIGNED_BYTE,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
+		);
+	}
+	// TODO: Map buffer and write directly to mapped ptr instead of copying the data
 	bufferDst.Write(copyInfo.bufferOffset,pixelData.size() *sizeof(pixelData.front()),pixelData.data());
 	return GetContext().CheckResult();
 }
@@ -563,6 +759,8 @@ bool prosper::GLCommandBuffer::DoRecordBlitImage(const prosper::util::BlitInfo &
 	auto framebufferDst = static_cast<GLImage&>(imgDst).GetOrCreateFramebuffer(blitInfo.dstSubresourceLayer.baseArrayLayer,blitInfo.dstSubresourceLayer.layerCount,blitInfo.dstSubresourceLayer.mipLevel,1);
 	if(util::is_compressed_format(imgSrc.GetFormat()))
 	{
+		if(srcOffsets.at(0).x > 0 || srcOffsets.at(0).y > 0 || dstOffsets.at(0).x > 0 || dstOffsets.at(0).y > 0 || srcOffsets.at(1).x != imgSrc.GetWidth() || srcOffsets.at(1).y != imgSrc.GetHeight() || dstOffsets.at(1).x != imgDst.GetWidth() || dstOffsets.at(1).y != imgDst.GetHeight())
+			std::cout<<"WARNING: Blit image offsets for compressed images currently not supported!"<<std::endl;
 		// Compressed textures can't be attached to a framebuffer (even for reading),
 		// so we can't use glBlitFramebuffer to copy it. We'll have to use a shader to
 		// do it instead.
@@ -583,11 +781,15 @@ bool prosper::GLCommandBuffer::DoRecordBlitImage(const prosper::util::BlitInfo &
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,drawFboId);
 		return GetContext().CheckResult();
 	}
+	// These can affect blitting (despite the specifcation not making any mention about it)
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
 	auto framebufferSrc = static_cast<GLImage&>(imgSrc).GetOrCreateFramebuffer(blitInfo.srcSubresourceLayer.baseArrayLayer,blitInfo.srcSubresourceLayer.layerCount,blitInfo.srcSubresourceLayer.mipLevel,1);
 	glBlitNamedFramebuffer(
 		framebufferSrc->GetGLFramebuffer(),framebufferDst->GetGLFramebuffer(),
-		srcOffsets.at(0).x,srcOffsets.at(0).y,srcOffsets.at(1).x,srcOffsets.at(1).y,
-		dstOffsets.at(0).x,dstOffsets.at(0).y,dstOffsets.at(1).x,dstOffsets.at(1).y,
+		srcOffsets.at(0).x,srcOffsets.at(0).y,srcOffsets.at(0).x +srcOffsets.at(1).x,srcOffsets.at(0).y +srcOffsets.at(1).y,
+		dstOffsets.at(0).x,dstOffsets.at(0).y,dstOffsets.at(0).x +dstOffsets.at(1).x,dstOffsets.at(0).y +dstOffsets.at(1).y,
 		static_cast<GLImage&>(imgSrc).GetBufferBit(),GL_LINEAR
 	);
 	return GetContext().CheckResult();

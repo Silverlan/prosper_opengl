@@ -15,14 +15,16 @@ namespace prosper
 		: public prosper::IFence
 	{
 	public:
-		static std::shared_ptr<IFence> Create(IPrContext &context,GLsync fence);
+		static std::shared_ptr<IFence> Create(IPrContext &context);
 
 		virtual ~GLFence() override;
 		virtual bool IsSet() const override;
 		virtual bool Reset() const override;
+		void Wait();
 	private:
-		GLFence(IPrContext &context,GLsync fence);
-		GLsync m_fence = nullptr;
+		void Clear() const;
+		GLFence(IPrContext &context);
+		mutable GLsync m_fence = nullptr;
 	};
 };
 

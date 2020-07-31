@@ -81,6 +81,7 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 		}
 	}
 	static_cast<GLContext&>(context).CheckResult();
+	img->InitializeSubresourceLayouts();
 	return img;
 }
 uint64_t GLImage::GetLayerSize(uint32_t w,uint32_t h) const
@@ -112,16 +113,18 @@ bool GLImage::WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t 
 		}
 		return static_cast<GLContext&>(GetContext()).CheckResult();
 	}
+	GLboolean normalized;
+	auto imgFormatType = util::to_opengl_image_format_type(GetFormat(),normalized);
 	if(is3DType == false)
 	{
 		glTexSubImage2D(
-			type,mipLevel,0,0,w,h,GetPixelDataFormat(),GL_UNSIGNED_BYTE,data
+			type,mipLevel,0,0,w,h,GetPixelDataFormat(),imgFormatType,data
 		);
 	}
 	else
 	{
 		glTexSubImage3D(
-			type,mipLevel,0,0,layerIndex,w,h,1,GetPixelDataFormat(),GL_UNSIGNED_BYTE,data
+			type,mipLevel,0,0,layerIndex,w,h,1,GetPixelDataFormat(),imgFormatType,data
 		);
 	}
 	return static_cast<GLContext&>(GetContext()).CheckResult();
@@ -217,21 +220,43 @@ std::shared_ptr<GLFramebuffer> GLImage::GetOrCreateFramebuffer(uint32_t baseLaye
 	m_framebuffers.push_back(std::static_pointer_cast<GLFramebuffer>(framebuffer));
 	return m_framebuffers.back();
 }
+void GLImage::InitializeSubresourceLayouts()
+{
+	auto numLayers = GetLayerCount();
+	auto numMipmaps = GetMipmapCount();
+
+	auto format = GetFormat();
+	auto szPerPixel = prosper::util::is_compressed_format(format) ? prosper::util::get_block_size(format) : prosper::util::get_byte_size(format);
+
+	m_subresourceLayouts.resize(numLayers,std::vector<prosper::util::SubresourceLayout>{numMipmaps});
+	DeviceSize offset = 0;
+	for(auto iLayer=decltype(numLayers){0u};iLayer<numLayers;++iLayer)
+	{
+		for(auto iMipmap=decltype(numMipmaps){0u};iMipmap<numMipmaps;++iMipmap)
+		{
+			auto w = GetWidth(iMipmap);
+			auto h = GetHeight(iMipmap);
+			auto size = w *h *szPerPixel;
+			prosper::util::SubresourceLayout layout {};
+			layout.size = size;
+			layout.row_pitch = w *szPerPixel;
+			layout.depth_pitch = w *h *szPerPixel;
+			layout.array_pitch = w *h *numMipmaps *szPerPixel;
+			layout.offset = offset;
+			m_subresourceLayouts.at(iLayer).at(iMipmap) = layout;
+
+			offset += size;
+		}
+	}
+}
 std::optional<prosper::util::SubresourceLayout> GLImage::GetSubresourceLayout(uint32_t layerId,uint32_t mipMapIdx)
 {
-	prosper::util::SubresourceLayout layout {};
-	// TODO
-#if 0
-	struct DLLPROSPER SubresourceLayout
-	{
-		DeviceSize offset;
-		DeviceSize size;
-		DeviceSize row_pitch;
-		DeviceSize array_pitch;
-		DeviceSize depth_pitch;
-	};
-#endif
-	return layout; // TODO
+	if(layerId >= m_subresourceLayouts.size())
+		return {};
+	auto &layerLayouts = m_subresourceLayouts.at(layerId);
+	if(mipMapIdx >= layerLayouts.size())
+		return {};
+	return layerLayouts.at(mipMapIdx);
 }
 DeviceSize GLImage::GetAlignment() const
 {

@@ -21,6 +21,7 @@
 #include "shader/prosper_shader.hpp"
 #include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
+#include "shader/gl_shader_flip_y.hpp"
 #include <shader/prosper_pipeline_create_info.hpp>
 #include <prosper_glsl.hpp>
 #include <thread>
@@ -478,7 +479,9 @@ void prosper::GLContext::GetGLSLDefinitions(glsl::Definitions &outDef) const
 	outDef.vertexIndex = "gl_VertexID";
 	outDef.instanceIndex = "gl_InstanceID";
 	// Matrix for converting depth range and y-axis inversion
-	outDef.apiCoordTransform = "mat4(1,0,0,0,0,-1,0,0,0,0,0.5,0,0,0,0.5,1) *T";
+	outDef.apiCoordTransform = "mat4(1,0,0,0,0,-1,0,0,0,0,2,0,0,0,-1,1) *T"; // Matrix is inverse of mat4(1,0,0,0,0,-1,0,0,0,0,0.5,0,0,0,0.5,1)
+	outDef.apiScreenSpaceTransform = "mat4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,1,1) *T";
+	outDef.apiDepthTransform = "mat4(1,0,0,0,0,1,0,0,0,0,2,0,0,0,-1,1) *T"; // Matrix is inverse of mat4(1,0,0,0,0,1,0,0,0,0,0.5,0,0,0,0.5,1)
 }
 
 bool prosper::GLContext::SavePipelineCache()
@@ -496,7 +499,13 @@ std::shared_ptr<prosper::ISecondaryCommandBuffer> prosper::GLContext::AllocateSe
 }
 void prosper::GLContext::SubmitCommandBuffer(prosper::ICommandBuffer &cmd,prosper::QueueFamilyType queueFamilyType,bool shouldBlock,prosper::IFence *fence)
 {
-
+	auto *glFence = static_cast<prosper::GLFence*>(fence);
+	if(glFence)
+	{
+		if(shouldBlock)
+			glFence->Wait();
+		glFence->Reset();
+	}
 }
 
 prosper::PipelineID prosper::GLContext::AddPipeline(prosper::Shader &shader,PipelineID shaderPipelineId,std::shared_ptr<GLShaderProgram> program)
@@ -626,6 +635,7 @@ bool prosper::GLContext::ClearPipeline(bool graphicsShader,PipelineID pipelineId
 }
 uint32_t prosper::GLContext::GetLastAcquiredSwapchainImageIndex() const {return 0;}
 
+void prosper::GLContext::Flush() {glFlush();}
 prosper::Result prosper::GLContext::WaitForFence(const IFence &fence,uint64_t timeout) const
 {
 
@@ -692,9 +702,11 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 	IPrContext::Initialize(createInfo);
 	m_hShaderClear = m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
 	m_hShaderBlit = m_shaderManager->RegisterShader("blit_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderBlit(context,identifier);});
+	m_hShaderFlipY = m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
 }
 prosper::ShaderClear *prosper::GLContext::GetClearShader() const {return static_cast<prosper::ShaderClear*>(m_hShaderClear.get());}
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
+prosper::ShaderFlipY *prosper::GLContext::GetFlipYShader() const {return static_cast<prosper::ShaderFlipY*>(m_hShaderFlipY.get());}
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle() {glFinish();}
@@ -720,6 +732,9 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		exit(EXIT_FAILURE);
 	}
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+	glPixelStorei(GL_PACK_ALIGNMENT,1);
 
 	if(IsValidationEnabled())
 	{
@@ -885,10 +900,7 @@ std::shared_ptr<prosper::IEvent> prosper::GLContext::CreateEvent()
 }
 std::shared_ptr<prosper::IFence> prosper::GLContext::CreateFence(bool createSignalled)
 {
-	return nullptr; // TODO
-	//throw std::runtime_error{"TODO"};
-	//auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
-	//return GLFence::Create(*this,fence);
+	return GLFence::Create(*this);
 }
 std::shared_ptr<prosper::ISampler> prosper::GLContext::CreateSampler(const prosper::util::SamplerCreateInfo &createInfo)
 {

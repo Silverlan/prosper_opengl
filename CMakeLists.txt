@@ -66,6 +66,7 @@ link_external_library(util_image)
 link_external_library(glfw)
 link_external_library(iglfw)
 link_external_library(glslang)
+link_external_library(muparserx)
 
 add_include_dir(glm)
 add_include_dir(gli)

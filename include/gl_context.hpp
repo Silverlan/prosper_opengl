@@ -17,6 +17,7 @@ namespace prosper
 {
 	class ShaderClear;
 	class ShaderBlit;
+	class ShaderFlipY;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
 	class DLLPROSPER_GL GLContext
@@ -24,6 +25,7 @@ namespace prosper
 	{
 	public:
 		static std::shared_ptr<GLContext> Create(const std::string &appName,bool bEnableValidation);
+
 		bool CheckFramebufferStatus(IFramebuffer &fb) const;
 		virtual bool IsImageFormatSupported(
 			prosper::Format format,prosper::ImageUsageFlags usageFlags,prosper::ImageType type=prosper::ImageType::e2D,
@@ -60,6 +62,7 @@ namespace prosper
 		) override;
 		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo,const ImageData &imgData={}) override;
 
+		virtual void Flush() override;
 		virtual Result WaitForFence(const IFence &fence,uint64_t timeout=std::numeric_limits<uint64_t>::max()) const override;
 		virtual Result WaitForFences(const std::vector<IFence*> &fences,bool waitAll=true,uint64_t timeout=std::numeric_limits<uint64_t>::max()) const override;
 
@@ -101,6 +104,7 @@ namespace prosper
 		virtual void Initialize(const CreateInfo &createInfo) override;
 		ShaderClear *GetClearShader() const;
 		ShaderBlit *GetBlitShader() const;
+		ShaderFlipY *GetFlipYShader() const;
 
 		virtual std::shared_ptr<IEvent> CreateEvent() override;
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled=false) override;
@@ -143,6 +147,7 @@ namespace prosper
 		};
 		::util::WeakHandle<Shader> m_hShaderClear {};
 		::util::WeakHandle<Shader> m_hShaderBlit {};
+		::util::WeakHandle<Shader> m_hShaderFlipY {};
 		std::shared_ptr<IBuffer> m_pushConstantBuffer = nullptr;
 		std::vector<PipelineData> m_pipelines = {};
 		std::queue<size_t> m_freePipelineIndices {};

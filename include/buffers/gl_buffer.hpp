@@ -25,7 +25,7 @@ namespace prosper
 	public:
 		friend GLDynamicResizableBuffer;
 		friend GLUniformResizableBuffer;
-		static std::shared_ptr<IBuffer> Create(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx);
+		static std::shared_ptr<IBuffer> Create(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx,const std::function<void(IBuffer&)> &onDestroyedCallback=nullptr);
 
 		virtual ~GLBuffer() override;
 		virtual std::shared_ptr<IBuffer> CreateSubBuffer(DeviceSize offset,DeviceSize size,const std::function<void(IBuffer&)> &onDestroyedCallback=nullptr) override;
