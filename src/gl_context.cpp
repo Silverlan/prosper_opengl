@@ -282,7 +282,22 @@ bool prosper::GLContext::CheckResult()
 void prosper::GLContext::ReloadWindow()
 {
 	WaitIdle();
-	InitWindow();
+
+	auto oldSize = (m_glfwWindow != nullptr) ? m_glfwWindow->GetSize() : Vector2i();
+	auto w = m_windowCreationInfo->width;
+	auto h = m_windowCreationInfo->height;
+	m_glfwWindow->SetSize(Vector2i{w,h,});
+
+	for(auto &img : m_swapchainImages)
+	{
+		auto &createInfo = const_cast<prosper::util::ImageCreateInfo&>(img->GetCreateInfo());
+		createInfo.width = w;
+		createInfo.height = h;
+	}
+	for(auto &fb :m_swapchainFramebuffers)
+		static_cast<GLFramebuffer&>(*fb).UpateSize(w,h);
+
+	OnResolutionChanged(w,h);
 }
 
 prosper::IFramebuffer *prosper::GLContext::GetSwapchainFramebuffer(uint32_t idx)
@@ -299,7 +314,6 @@ void prosper::GLContext::InitCommandBuffers()
 
 void prosper::GLContext::InitWindow()
 {
-	auto oldSize = (m_glfwWindow != nullptr) ? m_glfwWindow->GetSize() : Vector2i();
 	auto &appName = GetAppName();
 	/* Create a window */
 	//m_windowPtr = Anvil::WindowFactory::create_window(platform,appName,width,height,true,std::bind(&Context::DrawFrame,this));
@@ -333,12 +347,6 @@ void prosper::GLContext::InitWindow()
 	glfwMakeContextCurrent(const_cast<GLFWwindow*>(m_glfwWindow->GetGLFWWindow()));
 
 	OnWindowInitialized();
-	if(m_glfwWindow != nullptr && umath::is_flag_set(m_stateFlags,StateFlags::Initialized) == true)
-	{
-		auto newSize = m_glfwWindow->GetSize();
-		if(newSize != oldSize)
-			OnResolutionChanged(newSize.x,newSize.y);
-	}
 }
 
 bool prosper::GLContext::IsPresentationModeSupported(prosper::PresentModeKHR presentMode) const

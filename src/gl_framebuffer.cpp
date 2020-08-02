@@ -71,5 +71,10 @@ GLFramebuffer::~GLFramebuffer()
 	if(m_framebuffer != 0)
 		glDeleteFramebuffers(1,&m_framebuffer);
 }
+void GLFramebuffer::UpateSize(uint32_t w,uint32_t h)
+{
+	m_width = w;
+	m_height = h;
+}
 const void *GLFramebuffer::GetInternalHandle() const {return reinterpret_cast<void*>(m_framebuffer);}
 #pragma optimize("",on)

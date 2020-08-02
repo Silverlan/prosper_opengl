@@ -742,10 +742,13 @@ bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::Bu
 	else
 	{
 		auto size = w *h *util::get_byte_size(format) *copyInfo.layerCount;
+
 		pixelData.resize(size);
+		GLboolean normalized;
+		auto imgFormatType = util::to_opengl_image_format_type(glImgDst.GetFormat(),normalized);
 		glGetTextureSubImage(
 			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,
-			glImgDst.GetPixelDataFormat(),GL_UNSIGNED_BYTE,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
+			glImgDst.GetPixelDataFormat(),imgFormatType,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
 		);
 	}
 	// TODO: Map buffer and write directly to mapped ptr instead of copying the data
