@@ -286,7 +286,8 @@ void prosper::GLContext::ReloadWindow()
 	auto oldSize = (m_glfwWindow != nullptr) ? m_glfwWindow->GetSize() : Vector2i();
 	auto w = m_windowCreationInfo->width;
 	auto h = m_windowCreationInfo->height;
-	m_glfwWindow->SetSize(Vector2i{w,h,});
+	m_glfwWindow->SetSize(Vector2i{w,h});
+	m_glfwWindow->UpdateWindow(*m_windowCreationInfo);
 
 	for(auto &img : m_swapchainImages)
 	{
@@ -294,7 +295,7 @@ void prosper::GLContext::ReloadWindow()
 		createInfo.width = w;
 		createInfo.height = h;
 	}
-	for(auto &fb :m_swapchainFramebuffers)
+	for(auto &fb : m_swapchainFramebuffers)
 		static_cast<GLFramebuffer&>(*fb).UpateSize(w,h);
 
 	OnResolutionChanged(w,h);

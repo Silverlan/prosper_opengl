@@ -36,6 +36,7 @@ namespace prosper
 		virtual std::optional<util::PhysicalDeviceImageFormatProperties> GetPhysicalDeviceImageFormatProperties(const ImageFormatPropertiesQuery &query) override;
 		virtual ~GLContext() override;
 		virtual std::string GetAPIIdentifier() const override {return "OpenGL";}
+		virtual std::string GetAPIAbbreviation() const override {return "GL";}
 
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
