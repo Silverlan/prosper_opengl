@@ -23,6 +23,7 @@ namespace prosper
 
 		virtual bool RecordBindIndexBuffer(IBuffer &buf,IndexType indexType=IndexType::UInt16,DeviceSize offset=0) override;
 		virtual bool RecordBindVertexBuffers(const prosper::ShaderGraphics &shader,const std::vector<IBuffer*> &buffers,uint32_t startBinding=0u,const std::vector<DeviceSize> &offsets={}) override;
+		virtual bool RecordBindRenderBuffer(const IRenderBuffer &renderBuffer) override;
 		virtual bool RecordDispatchIndirect(prosper::IBuffer &buffer,DeviceSize size) override;
 		virtual bool RecordDispatch(uint32_t x,uint32_t y,uint32_t z) override;
 		virtual bool RecordDraw(uint32_t vertCount,uint32_t instanceCount=1,uint32_t firstVertex=0,uint32_t firstInstance=0) override;
@@ -88,8 +89,6 @@ namespace prosper
 			std::optional<PipelineID> shaderPipelineId {};
 			uint32_t nextActiveTextureIndex = 0;
 			uint32_t numVertexAttribBindings = 0;
-
-			std::vector<IBuffer*> vertexBuffers {};
 		} m_boundPipelineData {};
 
 		struct BoundIndexBufferData

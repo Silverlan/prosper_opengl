@@ -113,11 +113,16 @@ namespace prosper
 		virtual std::shared_ptr<IRenderPass> CreateRenderPass(const util::RenderPassCreateInfo &renderPassInfo) override;
 		virtual std::shared_ptr<IDescriptorSetGroup> CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) override;
 		virtual std::shared_ptr<IFramebuffer> CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments) override;
+		virtual std::shared_ptr<IRenderBuffer> CreateRenderBuffer(
+			const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,
+			const std::vector<prosper::DeviceSize> &offsets={},const std::optional<IndexBufferInfo> &indexBufferInfo={}
+		) override;
 
 		bool CheckResult();
 		GLBuffer &GetPushConstantBuffer() const;
 		std::optional<GLuint> GetPipelineProgram(PipelineID pipelineId) const;
 		std::optional<uint32_t> ShaderPipelineDescSetBindingIndexToBindingPoint(PipelineID pipelineId,uint32_t setIdx,uint32_t bindingIdx) const;
+		bool BindVertexBuffers(const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<IBuffer*> &buffers,uint32_t startBinding,const std::vector<DeviceSize> &offsets,uint32_t *optOutAbsAttrId=nullptr);
 	protected:
 		GLContext(const std::string &appName,bool bEnableValidation=false);
 		void InitWindow();

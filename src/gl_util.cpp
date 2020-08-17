@@ -7,7 +7,7 @@
 #include <cassert>
 
 using namespace prosper;
-
+#pragma optimize("",off)
 GLuint prosper::util::to_opengl_enum(prosper::Filter filter)
 {
 	auto glFilter = GL_LINEAR;
@@ -185,6 +185,7 @@ GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboole
 	case prosper::Format::B8G8R8_UNorm_PoorCoverage:
 	case prosper::Format::R8G8B8A8_UNorm:
 	case prosper::Format::B8G8R8A8_UNorm:
+	case prosper::Format::A8B8G8R8_UNorm_Pack32:
 		outNormalized = GL_TRUE;
 	case prosper::Format::R8_UInt:
 	case prosper::Format::R8G8_UInt:
@@ -194,6 +195,7 @@ GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboole
 	case prosper::Format::R8_SNorm:
 	case prosper::Format::R8G8_SNorm:
 	case prosper::Format::R8G8B8A8_SNorm:
+	case prosper::Format::A8B8G8R8_SNorm_Pack32:
 		outNormalized = GL_TRUE;
 	case prosper::Format::B8G8R8_SInt_PoorCoverage:
 	case prosper::Format::B8G8R8A8_SInt:
@@ -395,6 +397,14 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RGBA_INTEGER;
 		return GL_RGBA8UI;
+	case prosper::Format::A8B8G8R8_UNorm_Pack32:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
+		return GL_RGBA8;
+	case prosper::Format::A8B8G8R8_SNorm_Pack32:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_RGBA;
+		return GL_RGBA8_SNORM;
 	case prosper::Format::R16_SInt:
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RED_INTEGER;
@@ -714,3 +724,4 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 	};
 #endif
 }
+#pragma optimize("",on)
