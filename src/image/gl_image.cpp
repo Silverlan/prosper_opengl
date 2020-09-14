@@ -76,7 +76,7 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 			auto w = img->GetWidth(iMipmap);
 			auto h = img->GetHeight(iMipmap);
 			auto size = img->GetLayerSize(w,h);
-			if(img->WriteImageData(w,h,iLayer,iMipmap,size,layerData.at(iMipmap)) == false)
+			if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,size,layerData.at(iMipmap)) == false)
 				return false;
 		}
 	}
@@ -88,7 +88,7 @@ uint64_t GLImage::GetLayerSize(uint32_t w,uint32_t h) const
 {
 	return w *h *(prosper::util::is_compressed_format(GetFormat()) ? prosper::util::get_block_size(GetFormat()) : prosper::util::get_byte_size(GetFormat()));
 }
-bool GLImage::WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data)
+bool GLImage::WriteImageData(uint32_t x,uint32_t y,uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t mipLevel,uint64_t size,const uint8_t *data)
 {
 	auto type = GetImageType(layerIndex);
 	auto is3DType = (type == GL_TEXTURE_2D_ARRAY || type == GL_TEXTURE_3D);
@@ -102,13 +102,13 @@ bool GLImage::WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t 
 		if(is3DType == false)
 		{
 			glCompressedTexSubImage2D(
-				type,mipLevel,0,0,w,h,format,size,data
+				type,mipLevel,x,y,w,h,format,size,data
 			);
 		}
 		else
 		{
 			glCompressedTexSubImage3D(
-				type,mipLevel,0,0,layerIndex,w,h,1,format,size,data
+				type,mipLevel,x,y,layerIndex,w,h,1,format,size,data
 			);
 		}
 		return static_cast<GLContext&>(GetContext()).CheckResult();
@@ -118,13 +118,13 @@ bool GLImage::WriteImageData(uint32_t w,uint32_t h,uint32_t layerIndex,uint32_t 
 	if(is3DType == false)
 	{
 		glTexSubImage2D(
-			type,mipLevel,0,0,w,h,GetPixelDataFormat(),imgFormatType,data
+			type,mipLevel,x,y,w,h,GetPixelDataFormat(),imgFormatType,data
 		);
 	}
 	else
 	{
 		glTexSubImage3D(
-			type,mipLevel,0,0,layerIndex,w,h,1,GetPixelDataFormat(),imgFormatType,data
+			type,mipLevel,x,y,layerIndex,w,h,1,GetPixelDataFormat(),imgFormatType,data
 		);
 	}
 	return static_cast<GLContext&>(GetContext()).CheckResult();

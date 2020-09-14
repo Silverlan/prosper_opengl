@@ -660,7 +660,7 @@ bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::Bu
 	for(auto iLayer=copyInfo.baseArrayLayer;iLayer<(copyInfo.baseArrayLayer +copyInfo.layerCount);++iLayer)
 	{
 		bufferSrc.Read(0,imgData.size(),imgData.data());
-		auto res = glImgDst.WriteImageData(w,h,iLayer,copyInfo.mipLevel,size,imgData.data());
+		auto res = glImgDst.WriteImageData(0,0,w,h,iLayer,copyInfo.mipLevel,size,imgData.data());
 		if(res == false)
 			return false;
 	}
