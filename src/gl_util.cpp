@@ -179,23 +179,27 @@ GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboole
 	outNormalized = GL_FALSE;
 	switch(format)
 	{
+	case prosper::Format::A8B8G8R8_UNorm_Pack32:
+		outNormalized = GL_TRUE;
+		return GL_UNSIGNED_INT_8_8_8_8_REV;
 	case prosper::Format::R8_UNorm:
 	case prosper::Format::R8G8_UNorm:
 	case prosper::Format::R8G8B8_UNorm_PoorCoverage:
 	case prosper::Format::B8G8R8_UNorm_PoorCoverage:
 	case prosper::Format::R8G8B8A8_UNorm:
 	case prosper::Format::B8G8R8A8_UNorm:
-	case prosper::Format::A8B8G8R8_UNorm_Pack32:
 		outNormalized = GL_TRUE;
 	case prosper::Format::R8_UInt:
 	case prosper::Format::R8G8_UInt:
 	case prosper::Format::R8G8B8_UInt_PoorCoverage:
 	case prosper::Format::R8G8B8A8_UInt:
 		return GL_UNSIGNED_BYTE;
+	case prosper::Format::A8B8G8R8_SNorm_Pack32:
+		outNormalized = GL_TRUE;
+		return GL_UNSIGNED_INT_8_8_8_8_REV;
 	case prosper::Format::R8_SNorm:
 	case prosper::Format::R8G8_SNorm:
 	case prosper::Format::R8G8B8A8_SNorm:
-	case prosper::Format::A8B8G8R8_SNorm_Pack32:
 		outNormalized = GL_TRUE;
 	case prosper::Format::B8G8R8_SInt_PoorCoverage:
 	case prosper::Format::B8G8R8A8_SInt:
@@ -399,11 +403,11 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 		return GL_RGBA8UI;
 	case prosper::Format::A8B8G8R8_UNorm_Pack32:
 		if(optOutPixelDataFormat)
-			*optOutPixelDataFormat = GL_RGBA;
+			*optOutPixelDataFormat = GL_ABGR_EXT;
 		return GL_RGBA8;
 	case prosper::Format::A8B8G8R8_SNorm_Pack32:
 		if(optOutPixelDataFormat)
-			*optOutPixelDataFormat = GL_RGBA;
+			*optOutPixelDataFormat = GL_ABGR_EXT;
 		return GL_RGBA8_SNORM;
 	case prosper::Format::R16_SInt:
 		if(optOutPixelDataFormat)
