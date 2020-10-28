@@ -9,7 +9,7 @@
 #include "image/gl_image_view.hpp"
 
 using namespace prosper;
-#pragma optimize("",off)
+
 std::shared_ptr<IFramebuffer> GLFramebuffer::Create(
 	IPrContext &context,const std::vector<std::shared_ptr<IImageView>> &attachments,
 	uint32_t width,uint32_t height,uint32_t depth,uint32_t layers
@@ -77,4 +77,3 @@ void GLFramebuffer::UpateSize(uint32_t w,uint32_t h)
 	m_height = h;
 }
 const void *GLFramebuffer::GetInternalHandle() const {return reinterpret_cast<void*>(m_framebuffer);}
-#pragma optimize("",on)

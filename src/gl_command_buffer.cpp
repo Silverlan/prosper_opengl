@@ -299,7 +299,6 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 			switch(type)
 			{
 			case prosper::DescriptorSetBinding::Type::Texture:
-			case prosper::DescriptorSetBinding::Type::ArrayTexture:
 			{
 				std::optional<uint32_t> layer {};
 				auto *tex = ds->GetBoundTexture(j,&layer);
@@ -309,6 +308,19 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 				glBindTextureUnit(activeTextureSlot,tex ? static_cast<GLImage&>(tex->GetImage()).GetGLImage() : 0);
 				auto *sampler = tex ? tex->GetSampler() : nullptr;
 				glBindSampler(activeTextureSlot,sampler ? static_cast<GLSampler&>(*sampler).GetGLSampler() : 0);
+				break;
+			}
+			case prosper::DescriptorSetBinding::Type::ArrayTexture:
+			{
+				auto numTextures = ds->GetBoundArrayTextureCount(j);
+				for(auto i=decltype(numTextures){0u};i<numTextures;++i)
+				{
+					auto *tex = ds->GetBoundArrayTexture(j,i);
+					uint32_t activeTextureSlot = *bindingPoint +i;
+					glBindTextureUnit(activeTextureSlot,tex ? static_cast<GLImage&>(tex->GetImage()).GetGLImage() : 0);
+					auto *sampler = tex ? tex->GetSampler() : nullptr;
+					glBindSampler(activeTextureSlot,sampler ? static_cast<GLSampler&>(*sampler).GetGLSampler() : 0);
+				}
 				break;
 			}
 			case prosper::DescriptorSetBinding::Type::UniformBuffer:

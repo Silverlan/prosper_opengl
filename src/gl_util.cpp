@@ -7,7 +7,7 @@
 #include <cassert>
 
 using namespace prosper;
-#pragma optimize("",off)
+
 GLuint prosper::util::to_opengl_enum(prosper::Filter filter)
 {
 	auto glFilter = GL_LINEAR;
@@ -728,4 +728,3 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 	};
 #endif
 }
-#pragma optimize("",on)

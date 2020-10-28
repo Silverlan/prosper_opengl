@@ -9,7 +9,6 @@
 
 using namespace prosper;
 
-#pragma optimize("",off)
 GLRenderBuffer::GLRenderBuffer(
 	prosper::IPrContext &context,const std::vector<prosper::IBuffer*> &buffers,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
@@ -39,4 +38,3 @@ std::shared_ptr<GLRenderBuffer> GLRenderBuffer::Create(
 	buf->m_vao = vao;
 	return buf;
 }
-#pragma optimize("",on)

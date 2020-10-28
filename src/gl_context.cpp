@@ -31,7 +31,6 @@
 #include <iglfw/glfw_window.h>
 #include <fsys/filesystem.h>
 
-#pragma optimize("",off)
 struct GLShaderStage;
 class GLShaderProgram
 {
@@ -710,9 +709,14 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf,bool shouldBlock,IFence *
 void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
 	IPrContext::Initialize(createInfo);
-	m_hShaderClear = m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
-	m_hShaderBlit = m_shaderManager->RegisterShader("blit_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderBlit(context,identifier);});
-	m_hShaderFlipY = m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
+	m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
+	m_hShaderClear = m_shaderManager->GetShader("clear_image");
+
+	m_shaderManager->RegisterShader("blit_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderBlit(context,identifier);});
+	m_hShaderBlit = m_shaderManager->GetShader("blit_image");
+
+	m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
+	m_hShaderFlipY = m_shaderManager->GetShader("flip_y");
 }
 prosper::ShaderClear *prosper::GLContext::GetClearShader() const {return static_cast<prosper::ShaderClear*>(m_hShaderClear.get());}
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
@@ -924,8 +928,11 @@ std::shared_ptr<prosper::IImageView> prosper::GLContext::DoCreateImageView(
 {
 	return GLImageView::Create(*this,img,createInfo,imgViewType,aspectMask);
 }
-std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const prosper::util::ImageCreateInfo &createInfo,const ImageData &imgData)
+std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const prosper::util::ImageCreateInfo &pcreateInfo,const ImageData &imgData)
 {
+	auto createInfo = pcreateInfo;
+	if((createInfo.flags &prosper::util::ImageCreateInfo::Flags::Cubemap) != prosper::util::ImageCreateInfo::Flags::None)
+		createInfo.layers = 6u;
 	return GLImage::Create(*this,createInfo,imgData);
 }
 std::shared_ptr<prosper::IRenderPass> prosper::GLContext::CreateRenderPass(const prosper::util::RenderPassCreateInfo &renderPassInfo)
@@ -1051,4 +1058,3 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 		*optOutAbsAttrId = absAttrId;
 	return CheckResult();
 }
-#pragma optimize("",on)

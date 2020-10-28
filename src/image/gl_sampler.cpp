@@ -8,7 +8,6 @@
 #include "gl_api.hpp"
 
 using namespace prosper;
-#pragma optimize("",off)
 std::shared_ptr<ISampler> GLSampler::Create(IPrContext &context,const prosper::util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler)
 {
 	return std::shared_ptr<GLSampler>{new GLSampler{context,samplerCreateInfo,sampler}};
@@ -125,7 +124,10 @@ bool GLSampler::DoUpdate()
 	}
 	}
 
-	glSamplerParameterf(m_sampler,GL_TEXTURE_MAX_ANISOTROPY,m_createInfo.maxAnisotropy);
+	auto maxAnisotropy = m_createInfo.maxAnisotropy;
+	if(maxAnisotropy == std::numeric_limits<decltype(maxAnisotropy)>::max())
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY,&maxAnisotropy);
+	
+	glSamplerParameterf(m_sampler,GL_TEXTURE_MAX_ANISOTROPY,maxAnisotropy);
 	return static_cast<GLContext&>(GetContext()).CheckResult();
 }
-#pragma optimize("",on)

@@ -12,7 +12,7 @@
 #include <functional>
 #include <sharedutils/util_string.h>
 #include <mpParser.h>
-#pragma optimize("",off)
+
 static size_t parse_definition(const std::string &glslShader,std::unordered_map<std::string,std::string> &outDefinitions,size_t startPos=0)
 {
 	auto pos = glslShader.find("#define ",startPos);
@@ -348,4 +348,3 @@ bool prosper::util::convert_glsl_set_bindings_to_opengl_binding_points(std::vect
 	}
 	return true;
 }
-#pragma optimize("",on)
