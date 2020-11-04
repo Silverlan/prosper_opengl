@@ -177,7 +177,7 @@ bool prosper::GLCommandBuffer::RecordPipelineBarrier(const prosper::util::Pipeli
 
 bool prosper::GLCommandBuffer::RecordSetDepthBias(float depthBiasConstantFactor,float depthBiasClamp,float depthBiasSlopeFactor)
 {
-	// TODO
+	glPolygonOffset(depthBiasSlopeFactor,depthBiasConstantFactor);
 	return true;
 }
 static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_t layerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount,const std::array<float,4> &clearColor,float clearDepth,bool depth)
@@ -454,6 +454,13 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 			else
 				glDisable(GL_SCISSOR_TEST);
 		}
+
+		auto isDepthBiasEnabled = false;
+		createInfo->GetDepthBiasState(&isDepthBiasEnabled,nullptr,nullptr,nullptr);
+		if(isDepthBiasEnabled)
+			glEnable(GL_POLYGON_OFFSET_FILL);
+		else
+			glDisable(GL_POLYGON_OFFSET_FILL);
 
 		auto customViewport = false;
 		auto numDynamicViewports = createInfo->GetDynamicViewportsCount();

@@ -750,6 +750,7 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
 	glPixelStorei(GL_PACK_ALIGNMENT,1);
 
+	glEnable(GL_CLIP_DISTANCE0);
 	if(IsValidationEnabled())
 	{
 		glEnable(GL_DEBUG_OUTPUT);
