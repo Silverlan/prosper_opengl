@@ -289,6 +289,12 @@ void prosper::GLContext::ReloadWindow()
 	m_glfwWindow->SetSize(Vector2i{w,h});
 	m_glfwWindow->UpdateWindow(*m_windowCreationInfo);
 
+	auto actualWindowSize = m_glfwWindow->GetSize();
+	w = actualWindowSize.x;
+	h = actualWindowSize.y;
+	m_windowCreationInfo->width = w;
+	m_windowCreationInfo->height = h;
+
 	for(auto &img : m_swapchainImages)
 	{
 		auto &createInfo = const_cast<prosper::util::ImageCreateInfo&>(img->GetCreateInfo());
