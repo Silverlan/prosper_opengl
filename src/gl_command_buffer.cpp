@@ -21,7 +21,7 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include <assert.h>
-#pragma optimize("",off)
+
 static const auto SCISSOR_FLIP_Y = false;
 prosper::GLCommandBuffer::~GLCommandBuffer()
 {
@@ -345,14 +345,24 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 	}
 	return GetContext().CheckResult();
 }
+
 bool prosper::GLCommandBuffer::RecordPushConstants(prosper::Shader &shader,PipelineID pipelineId,ShaderStageFlags stageFlags,uint32_t offset,uint32_t size,const void *data)
 {
+	// Push constants are small in size and usually don't change between render calls, so we
+	// make sure the new data is actually different from what we already have (and if it's not, we can just skip the
+	// update altogether).
+	static std::array<uint8_t,IPrContext::MAX_COMMON_PUSH_CONSTANT_SIZE> pushConstantData {0};
+	if(memcmp(pushConstantData.data() +offset,data,size) == 0)
+		return true;
+	memcpy(pushConstantData.data() +offset,data,size);
+
 	auto &buf = GetContext().GetPushConstantBuffer();
 	if(RecordUpdateBuffer(buf,offset,size,data) == false)
 		return false;
 	glBindBufferBase(GL_UNIFORM_BUFFER,0,buf.GetGLBuffer());
 	return GetContext().CheckResult();
 }
+
 void prosper::GLCommandBuffer::ClearBoundPipeline()
 {
 	ICommandBuffer::ClearBoundPipeline();
@@ -833,4 +843,3 @@ prosper::GLSecondaryCommandBuffer::GLSecondaryCommandBuffer(IPrContext &context,
 	: GLCommandBuffer{context,queueFamilyType},
 	ICommandBuffer{context,queueFamilyType},ISecondaryCommandBuffer{context,queueFamilyType}
 {}
-#pragma optimize("",on)

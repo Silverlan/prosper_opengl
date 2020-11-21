@@ -706,7 +706,12 @@ void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_pt
 	umath::set_flag(m_stateFlags,StateFlags::IsRecording,false);
 	cmdBuffer->StopRecording();
 	// TODO: Submit command buffer?
-	m_glfwWindow->SwapBuffers();
+	
+	//if(m_glfwWindow->IsVSyncEnabled())
+		m_glfwWindow->SwapBuffers();
+	//else
+	//	glFlush();
+
 }
 bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf,bool shouldBlock,IFence *optFence)
 {
@@ -848,7 +853,8 @@ void prosper::GLContext::InitPushConstantBuffer()
 	bufCreateInfo.memoryFeatures = MemoryFeatureFlags::CPUToGPU | MemoryFeatureFlags::WriteOnly;
 	bufCreateInfo.size = MAX_COMMON_PUSH_CONSTANT_SIZE;
 	bufCreateInfo.usageFlags = prosper::BufferUsageFlags::UniformBufferBit;
-	m_pushConstantBuffer = CreateBuffer(bufCreateInfo);
+	std::array<uint8_t,MAX_COMMON_PUSH_CONSTANT_SIZE> data {};
+	m_pushConstantBuffer = CreateBuffer(bufCreateInfo,data.data());
 }
 
 std::shared_ptr<prosper::IBuffer> prosper::GLContext::CreateBuffer(const prosper::util::BufferCreateInfo &createInfo,const void *data)
