@@ -44,13 +44,10 @@ std::shared_ptr<IFramebuffer> GLFramebuffer::Create(
 			bufferTargets.push_back(GL_NONE);
 			continue; // Should be unreachable
 		}
-		if(img.IsLayered() == false)
+		if(baseLayer == 0)
 			glNamedFramebufferTexture(framebuffer,attachment,texId,mipmapLevel);
 		else
-		{
-			for(auto layerId=baseLayer;layerId<(baseLayer +numLayers);++layerId)
-				glNamedFramebufferTextureLayer(framebuffer,attachment,texId,mipmapLevel,layerId);
-		}
+			glNamedFramebufferTextureLayer(framebuffer,attachment,texId,mipmapLevel,baseLayer);
 		++attId;
 	}
 	glNamedFramebufferDrawBuffers(framebuffer,bufferTargets.size(),bufferTargets.data());
