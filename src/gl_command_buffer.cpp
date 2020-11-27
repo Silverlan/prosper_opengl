@@ -21,7 +21,7 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include <assert.h>
-
+#pragma optimize("",off)
 static const auto SCISSOR_FLIP_Y = false;
 prosper::GLCommandBuffer::~GLCommandBuffer()
 {
@@ -119,7 +119,10 @@ bool prosper::GLCommandBuffer::RecordDrawIndexed(uint32_t indexCount,uint32_t in
 	auto glTopology = prosper::util::to_opengl_enum(pipelineCreateInfo.GetPrimitiveTopology());
 
 	int32_t offset = m_boundIndexBufferData.offset;
-	glDrawElements(glTopology,indexCount,util::to_opengl_enum(m_boundIndexBufferData.indexType),(void*)offset);
+	if(instanceCount == 1)
+		glDrawElements(glTopology,indexCount,util::to_opengl_enum(m_boundIndexBufferData.indexType),(void*)offset);
+	else
+		glDrawElementsInstanced(glTopology,indexCount,util::to_opengl_enum(m_boundIndexBufferData.indexType),(void*)offset,instanceCount);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordDrawIndexedIndirect(IBuffer &buf,DeviceSize offset,uint32_t drawCount,uint32_t stride)
@@ -827,7 +830,9 @@ bool prosper::GLPrimaryCommandBuffer::StartRecording(bool oneTimeSubmit,bool sim
 }
 bool prosper::GLPrimaryCommandBuffer::DoRecordEndRenderPass()
 {
-	return true; // TODO
+	//glBindFramebuffer(GL_FRAMEBUFFER,0);
+	//return dynamic_cast<GLContext&>(IPrimaryCommandBuffer::GetContext()).CheckResult();
+	return true;
 }
 bool prosper::GLPrimaryCommandBuffer::RecordNextSubPass()
 {
@@ -843,3 +848,4 @@ prosper::GLSecondaryCommandBuffer::GLSecondaryCommandBuffer(IPrContext &context,
 	: GLCommandBuffer{context,queueFamilyType},
 	ICommandBuffer{context,queueFamilyType},ISecondaryCommandBuffer{context,queueFamilyType}
 {}
+#pragma optimize("",on)

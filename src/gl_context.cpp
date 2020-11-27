@@ -30,6 +30,7 @@
 #include <buffers/prosper_buffer_create_info.hpp>
 #include <iglfw/glfw_window.h>
 #include <fsys/filesystem.h>
+#include <numeric>
 
 struct GLShaderStage;
 class GLShaderProgram
@@ -484,6 +485,18 @@ prosper::DeviceSize prosper::GLContext::CalcBufferAlignment(BufferUsageFlags usa
 	GLint bufferOffsetAlignment = 0;
 	if(umath::is_flag_set(usageFlags,BufferUsageFlags::UniformBufferBit))
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,&bufferOffsetAlignment);
+	if(umath::is_flag_set(usageFlags,BufferUsageFlags::StorageBufferBit))
+	{
+		GLint storageBufferAlignment = 0;
+		glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT,&storageBufferAlignment);
+		if(storageBufferAlignment > 0)
+		{
+			if(bufferOffsetAlignment == 0)
+				bufferOffsetAlignment = storageBufferAlignment;
+			else
+				bufferOffsetAlignment = std::lcm(storageBufferAlignment,bufferOffsetAlignment);
+		}
+	}
 	return bufferOffsetAlignment;
 }
 
@@ -975,14 +988,7 @@ std::shared_ptr<prosper::IRenderBuffer> prosper::GLContext::CreateRenderBuffer(
 }
 bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<IBuffer*> &buffers,uint32_t startBinding,const std::vector<DeviceSize> &offsets,uint32_t *optOutAbsAttrId)
 {
-	std::vector<GLuint> glBuffers;
-	std::vector<int64_t> glOffsets;
-	std::vector<GLint> glStrides;
-
 	auto numBuffers = buffers.size();
-	glBuffers.reserve(numBuffers);
-	glOffsets.reserve(numBuffers);
-	glStrides.reserve(numBuffers);
 	uint32_t absAttrId = 0;
 	for(auto i=decltype(startBinding){0u};i<startBinding;++i)
 	{
@@ -992,9 +998,8 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 	}
 	for(auto i=decltype(buffers.size()){0u};i<buffers.size();++i)
 	{
-		auto &buf = buffers.at(i);
-		glBuffers.push_back(dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
-		glOffsets.push_back((i < offsets.size()) ? offsets.at(i) : 0);
+		auto *buf = buffers[i];
+		auto bufOffset = (i < offsets.size()) ? offsets[i] : 0;
 
 		uint32_t stride = 0;
 		uint32_t bindingIndex = 0;
@@ -1002,7 +1007,6 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 		const prosper::VertexInputAttribute *attrs;
 		prosper::VertexInputRate rate;
 		pipelineCreateInfo.GetVertexBindingProperties(startBinding +i,&bindingIndex,&stride,&rate,&numAttributes,&attrs);
-		glStrides.push_back(stride);
 		for(auto attrId=decltype(numAttributes){0u};attrId<numAttributes;++attrId)
 		{
 			auto &attr = attrs[attrId];
@@ -1011,20 +1015,44 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 			auto type = util::to_opengl_image_format_type(attr.format,normalized);
 			auto numComponents = util::get_component_count(attr.format);
 
-			glEnableVertexAttribArray(absAttrId);
-			glBindBuffer(GL_ARRAY_BUFFER,dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
-			int32_t offset = buf->GetStartOffset() +attr.offsetInBytes;
-			switch(type)
+			if(buf)
 			{
-			case GL_UNSIGNED_BYTE:
-			case GL_BYTE:
-			case GL_UNSIGNED_SHORT:
-			case GL_SHORT:
-			case GL_INT:
-			case GL_UNSIGNED_INT:
-				if(normalized == GL_FALSE)
+				glEnableVertexAttribArray(absAttrId);
+				glBindBuffer(GL_ARRAY_BUFFER,dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
+				int32_t offset = buf->GetStartOffset() +bufOffset +attr.offsetInBytes;
+				switch(type)
 				{
-					glVertexAttribIPointer(
+				case GL_UNSIGNED_BYTE:
+				case GL_BYTE:
+				case GL_UNSIGNED_SHORT:
+				case GL_SHORT:
+				case GL_INT:
+				case GL_UNSIGNED_INT:
+					if(normalized == GL_FALSE)
+					{
+						glVertexAttribIPointer(
+							absAttrId, // Attribute index
+							numComponents, // Size
+							type, // Type
+							stride, // Stride
+							(void*)offset // Offset
+						);
+						break;
+					}
+					// No break on purpose!
+				case GL_FLOAT:
+				case GL_HALF_FLOAT:
+					glVertexAttribPointer(
+						absAttrId, // Attribute index
+						numComponents, // Size
+						type, // Type
+						normalized, // Normalized
+						stride, // Stride
+						(void*)offset // Offset
+					);
+					break;
+				case GL_DOUBLE:
+					glVertexAttribLPointer(
 						absAttrId, // Attribute index
 						numComponents, // Size
 						type, // Type
@@ -1033,36 +1061,15 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 					);
 					break;
 				}
-				// No break on purpose!
-			case GL_FLOAT:
-			case GL_HALF_FLOAT:
-				glVertexAttribPointer(
-					absAttrId, // Attribute index
-					numComponents, // Size
-					type, // Type
-					normalized, // Normalized
-					stride, // Stride
-					(void*)offset // Offset
-				);
-				break;
-			case GL_DOUBLE:
-				glVertexAttribLPointer(
-					absAttrId, // Attribute index
-					numComponents, // Size
-					type, // Type
-					stride, // Stride
-					(void*)offset // Offset
-				);
-				break;
-			}
-			switch(rate)
-			{
-			case prosper::VertexInputRate::Vertex:
-				glVertexAttribDivisor(absAttrId,0);
-				break;
-			case prosper::VertexInputRate::Instance:
-				glVertexAttribDivisor(absAttrId,1);
-				break;
+				switch(rate)
+				{
+				case prosper::VertexInputRate::Vertex:
+					glVertexAttribDivisor(absAttrId,0);
+					break;
+				case prosper::VertexInputRate::Instance:
+					glVertexAttribDivisor(absAttrId,1);
+					break;
+				}
 			}
 			++absAttrId;
 		}
