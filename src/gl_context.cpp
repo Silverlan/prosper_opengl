@@ -169,7 +169,9 @@ std::shared_ptr<prosper::GLContext> prosper::GLContext::Create(const std::string
 }
 prosper::GLContext::GLContext(const std::string &appName,bool bEnableValidation)
 	: IPrContext{appName,bEnableValidation}
-{}
+{
+	m_numSwapchainImages = 2u;
+}
 prosper::GLContext::~GLContext()
 {
 	m_pipelines.clear();
@@ -262,7 +264,7 @@ static std::string error_to_string(GLenum err)
 	}
 }
 
-prosper::GLBuffer &prosper::GLContext::GetPushConstantBuffer() const {return dynamic_cast<GLBuffer&>(*m_pushConstantBuffer);}
+prosper::GLBuffer &prosper::GLContext::GetPushConstantBuffer() const {return m_pushConstantBuffer->GetAPITypeRef<GLBuffer>();}
 
 std::optional<GLuint> prosper::GLContext::GetPipelineProgram(PipelineID pipelineId) const
 {
@@ -317,7 +319,7 @@ void prosper::GLContext::InitCommandBuffers()
 {
 	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(*this,prosper::QueueFamilyType::Universal);
 	cmdBuffer->SetDebugName("swapchain_cmd" +std::to_string(0));
-	m_commandBuffers = {cmdBuffer};
+	m_commandBuffers = {cmdBuffer,cmdBuffer};
 }
 
 void prosper::GLContext::InitWindow()
@@ -661,7 +663,7 @@ bool prosper::GLContext::ClearPipeline(bool graphicsShader,PipelineID pipelineId
 	m_freePipelineIndices.push(pipelineId);
 	return true;
 }
-uint32_t prosper::GLContext::GetLastAcquiredSwapchainImageIndex() const {return 0;}
+uint32_t prosper::GLContext::GetLastAcquiredSwapchainImageIndex() const {return m_n_swapchain_image;}
 
 void prosper::GLContext::Flush() {glFlush();}
 prosper::Result prosper::GLContext::WaitForFence(const IFence &fence,uint64_t timeout) const
@@ -700,6 +702,7 @@ bool prosper::GLContext::QueryResult(const Query &query,uint64_t &r) const
 void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_ptr<prosper::IPrimaryCommandBuffer>&,uint32_t)> &drawFrame)
 {
 	// TODO: Wait for fences?
+	m_n_swapchain_image = (m_n_swapchain_image == 1) ? 0 : 1;
 	ClearKeepAliveResources();
 
 	auto &cmdBuffer = m_commandBuffers.at(m_n_swapchain_image);
@@ -748,13 +751,7 @@ prosper::ShaderFlipY *prosper::GLContext::GetFlipYShader() const {return static_
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle() {glFinish();}
-void prosper::GLContext::DoFlushSetupCommandBuffer()
-{
-	if(m_setupCmdBuffer == nullptr)
-		return;
-	glFinish();
-	m_setupCmdBuffer = nullptr;
-}
+void prosper::GLContext::DoFlushCommandBuffer(ICommandBuffer &cmd) {glFinish();}
 void prosper::GLContext::ReloadSwapchain()
 {
 
@@ -847,7 +844,7 @@ void prosper::GLContext::InitSwapchainImages()
 	imgCreateInfo.usage = prosper::ImageUsageFlags::TransferDstBit;
 	imgCreateInfo.flags = util::ImageCreateInfo::Flags::DontAllocateMemory;
 	auto img = std::shared_ptr<GLImage>{new GLImage{*this,imgCreateInfo,0,GL_RGBA}};
-	m_swapchainImages = {img};
+	m_swapchainImages = {img,img};
 
 	prosper::util::ImageViewCreateInfo imgViewCreateInfo {};
 	imgViewCreateInfo.baseLayer = 0;
@@ -857,7 +854,7 @@ void prosper::GLContext::InitSwapchainImages()
 	imgViewCreateInfo.format = prosper::Format::R8G8B8A8_UNorm;
 	auto imgView = GLImageView::Create(*this,*img,imgViewCreateInfo,prosper::ImageViewType::e2D,prosper::ImageAspectFlags::ColorBit);
 	auto framebuffer = std::shared_ptr<GLFramebuffer>{new GLFramebuffer{*this,{imgView},imgCreateInfo.width,imgCreateInfo.height,1,1,0}};
-	m_swapchainFramebuffers = {framebuffer};
+	m_swapchainFramebuffers = {framebuffer,framebuffer};
 }
 
 void prosper::GLContext::InitPushConstantBuffer()
@@ -1018,7 +1015,7 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 			if(buf)
 			{
 				glEnableVertexAttribArray(absAttrId);
-				glBindBuffer(GL_ARRAY_BUFFER,dynamic_cast<GLBuffer*>(buf)->GetGLBuffer());
+				glBindBuffer(GL_ARRAY_BUFFER,buf->GetAPITypeRef<GLBuffer>().GetGLBuffer());
 				int32_t offset = buf->GetStartOffset() +bufOffset +attr.offsetInBytes;
 				switch(type)
 				{

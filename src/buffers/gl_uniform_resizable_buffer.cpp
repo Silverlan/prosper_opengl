@@ -18,13 +18,13 @@ prosper::GLUniformResizableBuffer::GLUniformResizableBuffer(
 	IBuffer{buffer.GetContext(),buffer.GetCreateInfo(),buffer.GetStartOffset(),buffer.GetSize()},
 	GLBuffer{buffer.GetContext(),buffer.GetCreateInfo(),buffer.GetStartOffset(),buffer.GetSize(),0}
 {
-	GLBuffer::m_buffer = dynamic_cast<GLBuffer&>(buffer).m_buffer;
-	dynamic_cast<GLBuffer&>(buffer).m_buffer = 0; // Setting to 0 to ensure it won't get deleted
+	GLBuffer::m_buffer = buffer.GetAPITypeRef<GLBuffer>().m_buffer;
+	buffer.GetAPITypeRef<GLBuffer>().m_buffer = 0; // Setting to 0 to ensure it won't get deleted
 }
 
 void prosper::GLUniformResizableBuffer::MoveInternalBuffer(IBuffer &other)
 {
-	auto &glBuffer = dynamic_cast<GLBuffer&>(other);
+	auto &glBuffer = other.GetAPITypeRef<GLBuffer>();
 	m_buffer = glBuffer.m_buffer;
 	glBuffer.m_buffer = 0;
 }

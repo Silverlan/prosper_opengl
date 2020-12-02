@@ -31,7 +31,7 @@ std::shared_ptr<GLRenderBuffer> GLRenderBuffer::Create(
 	glBindVertexArray(vao);
 	context.BindVertexBuffers(pipelineCreateInfo,buffers,0u,offsets);
 	if(indexBufferInfo.has_value())
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dynamic_cast<prosper::GLBuffer&>(*indexBufferInfo->buffer).GetGLBuffer());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferInfo->buffer->GetAPITypeRef<GLBuffer>().GetGLBuffer());
 	glBindVertexArray(oldVao);
 
 	auto buf = std::shared_ptr<GLRenderBuffer>{new GLRenderBuffer{context,buffers,indexBufferInfo}};

@@ -39,7 +39,7 @@ bool prosper::GLCommandBuffer::StopRecording() const
 
 bool prosper::GLCommandBuffer::RecordBindIndexBuffer(IBuffer &buf,IndexType indexType,DeviceSize offset)
 {
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,dynamic_cast<GLBuffer&>(buf).GetGLBuffer());
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,buf.GetAPITypeRef<GLBuffer>().GetGLBuffer());
 	m_boundIndexBufferData.indexType = indexType;
 	m_boundIndexBufferData.offset = buf.GetStartOffset() +offset;
 	return GetContext().CheckResult();
@@ -69,7 +69,7 @@ bool prosper::GLCommandBuffer::RecordBindRenderBuffer(const IRenderBuffer &rende
 }
 bool prosper::GLCommandBuffer::RecordDispatchIndirect(prosper::IBuffer &buffer,DeviceSize size)
 {
-	glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER,dynamic_cast<GLBuffer&>(buffer).GetGLBuffer());
+	glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER,buffer.GetAPITypeRef<GLBuffer>().GetGLBuffer());
 	glDispatchComputeIndirect(size);
 	return GetContext().CheckResult();
 }
@@ -142,7 +142,7 @@ bool prosper::GLCommandBuffer::RecordFillBuffer(IBuffer &buf,DeviceSize offset,D
 	std::vector<uint32_t> vData {};
 	vData.resize(size /sizeof(uint32_t));
 	std::fill(vData.begin(),vData.end(),value);
-	glClearNamedBufferSubData(dynamic_cast<GLBuffer&>(buf).GetGLBuffer(),GL_R32UI,offset,size,GL_RGBA_INTEGER,GL_UNSIGNED_INT,vData.data());
+	glClearNamedBufferSubData(buf.GetAPITypeRef<GLBuffer>().GetGLBuffer(),GL_R32UI,offset,size,GL_RGBA_INTEGER,GL_UNSIGNED_INT,vData.data());
 	return GetContext().CheckResult();
 }
 
@@ -268,7 +268,7 @@ bool prosper::GLCommandBuffer::RecordClearAttachment(IImage &img,float clearDept
 }
 bool prosper::GLCommandBuffer::RecordUpdateBuffer(IBuffer &buffer,uint64_t offset,uint64_t size,const void *data)
 {
-	auto &glBuffer = dynamic_cast<GLBuffer&>(buffer);
+	auto &glBuffer = buffer.GetAPITypeRef<GLBuffer>();
 	glNamedBufferSubData(glBuffer.GetGLBuffer(),glBuffer.GetStartOffset() +offset,size,data);
 	return GetContext().CheckResult();
 }
@@ -332,7 +332,7 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 				DeviceSize offset,size;
 				auto *buf = ds->GetBoundBuffer(j,&offset,&size);
 				if(buf)
-					glBindBufferRange(GL_UNIFORM_BUFFER,*bindingPoint,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
+					glBindBufferRange(GL_UNIFORM_BUFFER,*bindingPoint,buf->GetAPITypeRef<GLBuffer>().GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
 				break;
 			}
 			case prosper::DescriptorSetBinding::Type::StorageBuffer:
@@ -340,7 +340,7 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 				DeviceSize offset,size;
 				auto *buf = ds->GetBoundBuffer(j,&offset,&size);
 				if(buf)
-					glBindBufferRange(GL_SHADER_STORAGE_BUFFER,*bindingPoint,dynamic_cast<GLBuffer&>(*buf).GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
+					glBindBufferRange(GL_SHADER_STORAGE_BUFFER,*bindingPoint,buf->GetAPITypeRef<GLBuffer>().GetGLBuffer(),buf->GetStartOffset() +offset +dsOffset,size);
 				break;
 			}
 			}
@@ -643,7 +643,7 @@ prosper::GLCommandBuffer::GLCommandBuffer(IPrContext &context,prosper::QueueFami
 {}
 bool prosper::GLCommandBuffer::DoRecordCopyBuffer(const prosper::util::BufferCopy &copyInfo,IBuffer &bufferSrc,IBuffer &bufferDst)
 {
-	glCopyNamedBufferSubData(dynamic_cast<GLBuffer&>(bufferSrc).GetGLBuffer(),dynamic_cast<GLBuffer&>(bufferDst).GetGLBuffer(),copyInfo.srcOffset,copyInfo.dstOffset,copyInfo.size);
+	glCopyNamedBufferSubData(bufferSrc.GetAPITypeRef<GLBuffer>().GetGLBuffer(),bufferDst.GetAPITypeRef<GLBuffer>().GetGLBuffer(),copyInfo.srcOffset,copyInfo.dstOffset,copyInfo.size);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::DoRecordCopyImage(const prosper::util::CopyInfo &copyInfo,IImage &imgSrc,IImage &imgDst,uint32_t w,uint32_t h)
@@ -788,7 +788,9 @@ bool prosper::GLPrimaryCommandBuffer::IsPrimary() const {return true;}
 prosper::GLPrimaryCommandBuffer::GLPrimaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
 	: GLCommandBuffer{context,queueFamilyType},
 	ICommandBuffer{context,queueFamilyType}
-{}
+{
+	m_apiTypePtr = this;
+}
 bool prosper::GLPrimaryCommandBuffer::DoRecordBeginRenderPass(
 	prosper::IImage &img,prosper::IRenderPass &rp,prosper::IFramebuffer &fb,uint32_t *layerId,
 	const std::vector<prosper::ClearValue> &clearValues
@@ -847,5 +849,7 @@ bool prosper::GLSecondaryCommandBuffer::IsSecondary() const {return true;}
 prosper::GLSecondaryCommandBuffer::GLSecondaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
 	: GLCommandBuffer{context,queueFamilyType},
 	ICommandBuffer{context,queueFamilyType},ISecondaryCommandBuffer{context,queueFamilyType}
-{}
+{
+	m_apiTypePtr = this;
+}
 #pragma optimize("",on)

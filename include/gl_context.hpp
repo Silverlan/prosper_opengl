@@ -137,7 +137,7 @@ namespace prosper
 		) override;
 		virtual void DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) override;
 		virtual void DoWaitIdle() override;
-		virtual void DoFlushSetupCommandBuffer() override;
+		virtual void DoFlushCommandBuffer(ICommandBuffer &cmd) override;
 		virtual void ReloadSwapchain() override;
 
 		virtual void InitAPI(const CreateInfo &createInfo) override;
