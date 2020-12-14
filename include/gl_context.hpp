@@ -37,6 +37,7 @@ namespace prosper
 		virtual ~GLContext() override;
 		virtual std::string GetAPIIdentifier() const override {return "OpenGL";}
 		virtual std::string GetAPIAbbreviation() const override {return "GL";}
+		virtual bool WaitForCurrentSwapchainCommandBuffer(std::string &outErrMsg) override;
 
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);

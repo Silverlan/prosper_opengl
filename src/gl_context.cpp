@@ -476,7 +476,11 @@ prosper::MemoryRequirements prosper::GLContext::GetMemoryRequirements(IImage &im
 	}
 	return memReq;
 }
-
+bool prosper::GLContext::WaitForCurrentSwapchainCommandBuffer(std::string &outErrMsg)
+{
+	Flush();
+	return true;
+}
 uint64_t prosper::GLContext::ClampDeviceMemorySize(uint64_t size,float percentageOfGPUMemory,MemoryFeatureFlags featureFlags) const
 {
 	// TODO
