@@ -828,7 +828,7 @@ bool prosper::GLPrimaryCommandBuffer::DoRecordBeginRenderPass(
 }
 bool prosper::GLPrimaryCommandBuffer::StartRecording(bool oneTimeSubmit,bool simultaneousUseAllowed) const
 {
-	return true;
+	return IPrimaryCommandBuffer::StartRecording(oneTimeSubmit,simultaneousUseAllowed);
 }
 bool prosper::GLPrimaryCommandBuffer::DoRecordEndRenderPass()
 {

@@ -108,6 +108,7 @@ namespace prosper
 	public:
 		static std::shared_ptr<GLPrimaryCommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
 		virtual bool IsPrimary() const override;
+		virtual bool StopRecording() const override {return IPrimaryCommandBuffer::StopRecording() && GLCommandBuffer::StopRecording();}
 
 		// If no render pass is specified, the render target's render pass will be used
 		virtual bool StartRecording(bool oneTimeSubmit=true,bool simultaneousUseAllowed=false) const override;
