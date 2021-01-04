@@ -34,7 +34,7 @@ bool prosper::GLCommandBuffer::Reset(bool shouldReleaseResources) const
 }
 bool prosper::GLCommandBuffer::StopRecording() const
 {
-	return true; // TODO
+	return true;
 }
 
 bool prosper::GLCommandBuffer::RecordBindIndexBuffer(IBuffer &buf,IndexType indexType,DeviceSize offset)
@@ -778,11 +778,32 @@ bool prosper::GLCommandBuffer::DoRecordResolveImage(IImage &imgSrc,IImage &imgDs
 	return false; // TODO
 }
 
+///////////////////
+
+std::shared_ptr<prosper::GLCommandBufferPool> prosper::GLCommandBufferPool::Create(prosper::IPrContext &context,prosper::QueueFamilyType queueFamilyType)
+{
+	return std::shared_ptr<GLCommandBufferPool>{new GLCommandBufferPool{context,queueFamilyType}};
+}
+std::shared_ptr<prosper::IPrimaryCommandBuffer> prosper::GLCommandBufferPool::AllocatePrimaryCommandBuffer() const
+{
+	return GLPrimaryCommandBuffer::Create(GetContext(),GetQueueFamilyType());
+}
+std::shared_ptr<prosper::ISecondaryCommandBuffer> prosper::GLCommandBufferPool::AllocateSecondaryCommandBuffer() const
+{
+	return GLSecondaryCommandBuffer::Create(GetContext(),GetQueueFamilyType());
+}
+	
+prosper::GLCommandBufferPool::GLCommandBufferPool(prosper::IPrContext &context,prosper::QueueFamilyType queueFamilyType)
+	: prosper::ICommandBufferPool{context,queueFamilyType}
+{}
+
 //////////////
 
 std::shared_ptr<prosper::GLPrimaryCommandBuffer> prosper::GLPrimaryCommandBuffer::Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
 {
-	return std::shared_ptr<GLPrimaryCommandBuffer>{new GLPrimaryCommandBuffer{context,queueFamilyType}};
+	auto cmdBuf = std::shared_ptr<GLPrimaryCommandBuffer>{new GLPrimaryCommandBuffer{context,queueFamilyType}};
+	cmdBuf->Initialize();
+	return cmdBuf;
 }
 bool prosper::GLPrimaryCommandBuffer::IsPrimary() const {return true;}
 prosper::GLPrimaryCommandBuffer::GLPrimaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
@@ -793,7 +814,7 @@ prosper::GLPrimaryCommandBuffer::GLPrimaryCommandBuffer(IPrContext &context,pros
 }
 bool prosper::GLPrimaryCommandBuffer::DoRecordBeginRenderPass(
 	prosper::IImage &img,prosper::IRenderPass &rp,prosper::IFramebuffer &fb,uint32_t *layerId,
-	const std::vector<prosper::ClearValue> &clearValues
+	const std::vector<prosper::ClearValue> &clearValues,RenderPassFlags renderPassFlags
 )
 {
 	glBindFramebuffer(GL_FRAMEBUFFER,static_cast<GLFramebuffer&>(fb).GetGLFramebuffer());
@@ -843,7 +864,9 @@ bool prosper::GLPrimaryCommandBuffer::RecordNextSubPass()
 
 std::shared_ptr<prosper::GLSecondaryCommandBuffer> prosper::GLSecondaryCommandBuffer::Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType)
 {
-	return std::shared_ptr<GLSecondaryCommandBuffer>{new GLSecondaryCommandBuffer{context,queueFamilyType}};
+	auto cmdBuf = std::shared_ptr<GLSecondaryCommandBuffer>{new GLSecondaryCommandBuffer{context,queueFamilyType}};
+	cmdBuf->Initialize();
+	return cmdBuf;
 }
 bool prosper::GLSecondaryCommandBuffer::IsSecondary() const {return true;}
 prosper::GLSecondaryCommandBuffer::GLSecondaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType)

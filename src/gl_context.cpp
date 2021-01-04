@@ -23,6 +23,7 @@
 #include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
 #include "shader/gl_shader_flip_y.hpp"
+#include <prosper_swap_command_buffer.hpp>
 #include <shader/prosper_pipeline_create_info.hpp>
 #include <prosper_glsl.hpp>
 #include <thread>
@@ -31,7 +32,7 @@
 #include <iglfw/glfw_window.h>
 #include <fsys/filesystem.h>
 #include <numeric>
-
+#pragma optimize("",off)
 struct GLShaderStage;
 class GLShaderProgram
 {
@@ -531,6 +532,10 @@ std::shared_ptr<prosper::ISecondaryCommandBuffer> prosper::GLContext::AllocateSe
 {
 	return GLSecondaryCommandBuffer::Create(*this,queueFamilyType);
 }
+std::shared_ptr<prosper::ICommandBufferPool> prosper::GLContext::CreateCommandBufferPool(prosper::QueueFamilyType queueFamilyType)
+{
+	return GLCommandBufferPool::Create(*this,queueFamilyType);
+}
 void prosper::GLContext::SubmitCommandBuffer(prosper::ICommandBuffer &cmd,prosper::QueueFamilyType queueFamilyType,bool shouldBlock,prosper::IFence *fence)
 {
 	auto *glFence = static_cast<prosper::GLFence*>(fence);
@@ -970,6 +975,7 @@ std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::CreateDescript
 {
 	return GLDescriptorSetGroup::Create(*this,descSetInfo);
 }
+std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup() {return std::make_shared<StSwapCommandBufferGroup>(*this);}
 std::shared_ptr<prosper::IFramebuffer> prosper::GLContext::CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments)
 {
 	std::vector<std::shared_ptr<IImageView>> ptrAttachments {};
@@ -1079,3 +1085,4 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 		*optOutAbsAttrId = absAttrId;
 	return CheckResult();
 }
+#pragma optimize("",on)

@@ -101,6 +101,17 @@ namespace prosper
 		std::array<int32_t,4> m_scissor {};
 	};
 
+	class DLLPROSPER_GL GLCommandBufferPool
+		: public prosper::ICommandBufferPool
+	{
+	public:
+		static std::shared_ptr<GLCommandBufferPool> Create(prosper::IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual std::shared_ptr<IPrimaryCommandBuffer> AllocatePrimaryCommandBuffer() const override;
+		virtual std::shared_ptr<ISecondaryCommandBuffer> AllocateSecondaryCommandBuffer() const override;
+	private:
+		GLCommandBufferPool(prosper::IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+	};
+
 	class DLLPROSPER_GL GLPrimaryCommandBuffer
 		: public GLCommandBuffer,
 		public IPrimaryCommandBuffer
@@ -109,6 +120,7 @@ namespace prosper
 		static std::shared_ptr<GLPrimaryCommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
 		virtual bool IsPrimary() const override;
 		virtual bool StopRecording() const override {return IPrimaryCommandBuffer::StopRecording() && GLCommandBuffer::StopRecording();}
+		virtual bool ExecuteCommands(prosper::ISecondaryCommandBuffer &cmdBuf) {return true;}
 
 		// If no render pass is specified, the render target's render pass will be used
 		virtual bool StartRecording(bool oneTimeSubmit=true,bool simultaneousUseAllowed=false) const override;
@@ -116,7 +128,7 @@ namespace prosper
 	protected:
 		GLPrimaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
 		virtual bool DoRecordEndRenderPass() override;
-		virtual bool DoRecordBeginRenderPass(prosper::IImage &img,prosper::IRenderPass &rp,prosper::IFramebuffer &fb,uint32_t *layerId,const std::vector<prosper::ClearValue> &clearValues) override;
+		virtual bool DoRecordBeginRenderPass(prosper::IImage &img,prosper::IRenderPass &rp,prosper::IFramebuffer &fb,uint32_t *layerId,const std::vector<prosper::ClearValue> &clearValues,RenderPassFlags renderPassFlags) override;
 	};
 
 	///////////////////
@@ -127,6 +139,7 @@ namespace prosper
 	{
 	public:
 		static std::shared_ptr<GLSecondaryCommandBuffer> Create(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
+		virtual bool StopRecording() const override {return ISecondaryCommandBuffer::StopRecording() && GLCommandBuffer::StopRecording();}
 		virtual bool IsSecondary() const override;
 	protected:
 		GLSecondaryCommandBuffer(IPrContext &context,prosper::QueueFamilyType queueFamilyType);
