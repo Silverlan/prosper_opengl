@@ -5,6 +5,7 @@
 #ifndef __PROSPER_GL_CONTEXT_HPP__
 #define __PROSPER_GL_CONTEXT_HPP__
 
+#include <shader/prosper_shader.hpp>
 #include <prosper_opengl_definitions.hpp>
 #include <prosper_context.hpp>
 #include <array>
@@ -20,6 +21,7 @@ namespace prosper
 	class ShaderFlipY;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
+
 	class DLLPROSPER_GL GLContext
 		: public IPrContext
 	{
@@ -75,6 +77,7 @@ namespace prosper
 			const std::string &entrypointName="main"
 		) override;
 		virtual std::shared_ptr<ShaderStageProgram> CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload=false) override;
+		virtual bool GetParsedShaderSourceCode(prosper::Shader &shader,std::vector<std::string> &outGlslCodePerStage,std::vector<prosper::ShaderStage> &outGlslCodeStages,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const override;
 		std::optional<std::string> CompileShaders(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog) const;
 		virtual bool InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const override;
 		virtual std::optional<PipelineID> AddPipeline(
@@ -114,8 +117,9 @@ namespace prosper
 		virtual std::shared_ptr<ISampler> CreateSampler(const util::SamplerCreateInfo &createInfo) override;
 		virtual std::shared_ptr<IRenderPass> CreateRenderPass(const util::RenderPassCreateInfo &renderPassInfo) override;
 		virtual std::shared_ptr<IDescriptorSetGroup> CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) override;
-		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup() override;
+		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(bool allowMt=true) override;
 		virtual std::shared_ptr<IFramebuffer> CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments) override;
+		virtual std::unique_ptr<IShaderPipelineLayout> GetShaderPipelineLayout(const Shader &shader,uint32_t pipelineIdx=0u) const override;
 		virtual std::shared_ptr<IRenderBuffer> CreateRenderBuffer(
 			const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,
 			const std::vector<prosper::DeviceSize> &offsets={},const std::optional<IndexBufferInfo> &indexBufferInfo={}

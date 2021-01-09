@@ -44,7 +44,7 @@ static void test_cubemap()
 	static_cast<GLContext&>(context).CheckResult();
 }
 #endif
-#pragma optimize("",off)
+
 std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,const IPrContext::ImageData &imgData)
 {
 	auto isCubemap = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::Cubemap);
@@ -277,4 +277,3 @@ bool GLImage::DoSetMemoryBuffer(IBuffer &buffer)
 {
 	return false; // TODO
 }
-#pragma optimize("",on)

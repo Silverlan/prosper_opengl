@@ -21,8 +21,36 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include <assert.h>
-#pragma optimize("",off)
+
 static const auto SCISSOR_FLIP_Y = false;
+
+namespace prosper
+{
+	class DLLPROSPER_GL GLShaderPipelineLayout
+		: public IShaderPipelineLayout
+	{
+	public:
+		static std::unique_ptr<GLShaderPipelineLayout> Create(const Shader &shader,uint32_t pipelineIdx);
+		prosper::Shader *GetShader() const {return m_shader.get();}
+		uint32_t GetPipelineIndex() const {return m_pipelineIdx;}
+	private:
+		using IShaderPipelineLayout::IShaderPipelineLayout;
+		mutable ::util::WeakHandle<prosper::Shader> m_shader {};
+		mutable uint32_t m_pipelineIdx = 0;
+	};
+};
+
+std::unique_ptr<prosper::GLShaderPipelineLayout> prosper::GLShaderPipelineLayout::Create(const Shader &shader,uint32_t pipelineIdx)
+{
+	auto res = std::unique_ptr<GLShaderPipelineLayout>{new GLShaderPipelineLayout{}};
+	res->m_shader = const_cast<Shader&>(shader).GetHandle();
+	res->m_pipelineIdx = pipelineIdx;
+	return res;
+}
+std::unique_ptr<prosper::IShaderPipelineLayout> prosper::GLContext::GetShaderPipelineLayout(const Shader &shader,uint32_t pipelineIdx) const {return GLShaderPipelineLayout::Create(shader,pipelineIdx);}
+
+////////////////
+
 prosper::GLCommandBuffer::~GLCommandBuffer()
 {
 
@@ -43,6 +71,11 @@ bool prosper::GLCommandBuffer::RecordBindIndexBuffer(IBuffer &buf,IndexType inde
 	m_boundIndexBufferData.indexType = indexType;
 	m_boundIndexBufferData.offset = buf.GetStartOffset() +offset;
 	return GetContext().CheckResult();
+}
+
+bool prosper::GLCommandBuffer::RecordBindVertexBuffer(const prosper::ShaderGraphics &shader,const IBuffer &buf,uint32_t startBinding,DeviceSize offset)
+{
+	return RecordBindVertexBuffers(shader,{&const_cast<IBuffer&>(buf)},startBinding,{offset});
 }
 
 bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGraphics &shader,const std::vector<IBuffer*> &buffers,uint32_t startBinding,const std::vector<DeviceSize> &offsets)
@@ -364,6 +397,29 @@ bool prosper::GLCommandBuffer::RecordPushConstants(prosper::Shader &shader,Pipel
 		return false;
 	glBindBufferBase(GL_UNIFORM_BUFFER,0,buf.GetGLBuffer());
 	return GetContext().CheckResult();
+}
+
+bool prosper::GLCommandBuffer::RecordBindDescriptorSets(
+	PipelineBindPoint bindPoint,const IShaderPipelineLayout &pipelineLayout,uint32_t firstSet,
+	const prosper::IDescriptorSet &descSet,uint32_t *optDynamicOffset
+)
+{
+	auto &glPipelineLayout = static_cast<const GLShaderPipelineLayout&>(pipelineLayout);
+	auto *shader = glPipelineLayout.GetShader();
+	if(shader == nullptr)
+		return false;
+	std::vector<uint32_t> dynamicOffsets;
+	if(optDynamicOffset)
+		dynamicOffsets.push_back(*optDynamicOffset);
+	return RecordBindDescriptorSets(bindPoint,*shader,glPipelineLayout.GetPipelineIndex(),firstSet,{&const_cast<prosper::IDescriptorSet&>(descSet)},dynamicOffsets);
+}
+bool prosper::GLCommandBuffer::RecordPushConstants(const IShaderPipelineLayout &pipelineLayout,ShaderStageFlags stageFlags,uint32_t offset,uint32_t size,const void *data)
+{
+	auto &glPipelineLayout = static_cast<const GLShaderPipelineLayout&>(pipelineLayout);
+	auto *shader = glPipelineLayout.GetShader();
+	if(shader == nullptr)
+		return false;
+	return RecordPushConstants(*shader,glPipelineLayout.GetPipelineIndex(),stageFlags,offset,size,data);
 }
 
 void prosper::GLCommandBuffer::ClearBoundPipeline()
@@ -875,4 +931,3 @@ prosper::GLSecondaryCommandBuffer::GLSecondaryCommandBuffer(IPrContext &context,
 {
 	m_apiTypePtr = this;
 }
-#pragma optimize("",on)

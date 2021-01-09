@@ -32,7 +32,7 @@
 #include <iglfw/glfw_window.h>
 #include <fsys/filesystem.h>
 #include <numeric>
-#pragma optimize("",off)
+
 struct GLShaderStage;
 class GLShaderProgram
 {
@@ -162,7 +162,7 @@ bool GLShaderProgram::Link(std::string &outErr)
 	return true;
 }
 
-////////////////
+/////////////
 
 std::shared_ptr<prosper::GLContext> prosper::GLContext::Create(const std::string &appName,bool bEnableValidation)
 {
@@ -381,12 +381,12 @@ std::shared_ptr<prosper::ShaderStageProgram> prosper::GLContext::CompileShader(p
 		return nullptr;
 	return GLShaderStage::Compile(stage,*shaderCode,outInfoLog);
 }
-bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
+bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader,std::vector<std::string> &outGlslCodePerStage,std::vector<prosper::ShaderStage> &outGlslCodeStages,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
 {
 	outErrStage = prosper::ShaderStage::Unknown;
 	auto &stages = shader.GetStages();
-	std::vector<std::string> glslCodePerStage {};
-	std::vector<prosper::ShaderStage> glslCodeStages {};
+	auto &glslCodePerStage = outGlslCodePerStage;
+	auto &glslCodeStages = outGlslCodeStages;
 	glslCodePerStage.reserve(stages.size());
 	glslCodeStages.reserve(stages.size());
 	for(auto i=decltype(stages.size()){0};i<stages.size();++i)
@@ -404,8 +404,16 @@ bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bR
 		glslCodePerStage.emplace_back(std::move(*glslCode));
 		glslCodeStages.push_back(stage->stage);
 	}
-	if(util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage,outInfoLog) == false)
+	return util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage,outInfoLog);
+}
+bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
+{
+	auto &stages = shader.GetStages();
+	std::vector<std::string> glslCodePerStage;
+	std::vector<prosper::ShaderStage> glslCodeStages;
+	if(GetParsedShaderSourceCode(shader,glslCodePerStage,glslCodeStages,outInfoLog,outDebugInfoLog,outErrStage) == false)
 		return false;
+
 	auto &logCallback = shader.GetLogCallback();
 	for(auto i=decltype(glslCodePerStage.size()){0u};i<glslCodePerStage.size();++i)
 	{
@@ -975,7 +983,11 @@ std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::CreateDescript
 {
 	return GLDescriptorSetGroup::Create(*this,descSetInfo);
 }
-std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup() {return std::make_shared<StSwapCommandBufferGroup>(*this);}
+std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(bool allowMt)
+{
+	// OpenGL does not support multi-threaded rendering
+	return std::make_shared<StSwapCommandBufferGroup>(*this);
+}
 std::shared_ptr<prosper::IFramebuffer> prosper::GLContext::CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments)
 {
 	std::vector<std::shared_ptr<IImageView>> ptrAttachments {};
@@ -1085,4 +1097,3 @@ bool prosper::GLContext::BindVertexBuffers(const prosper::GraphicsPipelineCreate
 		*optOutAbsAttrId = absAttrId;
 	return CheckResult();
 }
-#pragma optimize("",on)

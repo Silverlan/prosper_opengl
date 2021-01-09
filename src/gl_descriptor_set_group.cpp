@@ -31,7 +31,9 @@ GLDescriptorSetGroup::GLDescriptorSetGroup(IPrContext &context,const DescriptorS
 
 GLDescriptorSet::GLDescriptorSet(GLDescriptorSetGroup &dsg)
 	: IDescriptorSet{dsg}
-{}
+{
+	m_apiTypePtr = static_cast<GLDescriptorSet*>(this);
+}
 /*struct DescriptorSetBinding
 {
 	enum class Type : uint8_t

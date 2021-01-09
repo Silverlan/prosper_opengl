@@ -7,7 +7,7 @@
 #include "gl_context.hpp"
 
 using namespace prosper;
-#pragma optimize("",off)
+
 std::shared_ptr<IBuffer> GLBuffer::Create(IPrContext &context,const prosper::util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,GLuint bufIdx,const std::function<void(IBuffer&)> &onDestroyedCallback)
 {
 	return std::shared_ptr<GLBuffer>{new GLBuffer{context,bufCreateInfo,startOffset,bufCreateInfo.size,bufIdx},[onDestroyedCallback](GLBuffer *buf) {
@@ -149,4 +149,3 @@ GLBuffer::~GLBuffer()
 	if(GetParent() == nullptr && m_buffer != 0)
 		glDeleteBuffers(1,&m_buffer);
 }
-#pragma optimize("",on)
