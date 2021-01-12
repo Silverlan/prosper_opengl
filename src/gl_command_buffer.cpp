@@ -321,6 +321,7 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 		auto &dsCreateInfo = dsInfoItems.at(setIdx);
 		auto dsOffset = dynamicOffsets.empty() ? 0 : dynamicOffsets.at(i);
 		auto *ds = descSets.at(i);
+		UpdateLastUsageTimes(*ds);
 		auto numBindings = ds->GetBindingCount();
 		for(auto j=decltype(numBindings){0u};j<numBindings;++j)
 		{
