@@ -220,7 +220,7 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 {
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
-	ScopeGuard sg {[drawFboId]() {
+	util::ScopeGuard sg {[drawFboId]() {
 		// Restore previous bound framebuffer
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,drawFboId);
 	}};
