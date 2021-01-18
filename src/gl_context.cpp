@@ -572,6 +572,7 @@ prosper::PipelineID prosper::GLContext::AddPipeline(prosper::Shader &shader,Pipe
 		pipelineId = m_pipelines.size() -1;
 	}
 	InitShaderPipeline(shader,pipelineId,shaderPipelineId);
+	AddShaderPipeline(shader,shaderPipelineId,pipelineId);
 	return pipelineId;
 }
 std::optional<prosper::PipelineID> prosper::GLContext::AddPipeline(
