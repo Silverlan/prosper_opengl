@@ -414,6 +414,17 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(
 		dynamicOffsets.push_back(*optDynamicOffset);
 	return RecordBindDescriptorSets(bindPoint,*shader,glPipelineLayout.GetPipelineIndex(),firstSet,{&const_cast<prosper::IDescriptorSet&>(descSet)},dynamicOffsets);
 }
+bool prosper::GLCommandBuffer::RecordBindDescriptorSets(
+	PipelineBindPoint bindPoint,const IShaderPipelineLayout &pipelineLayout,uint32_t firstSet,
+	const std::vector<prosper::IDescriptorSet*> &descSets,const std::vector<uint32_t> dynamicOffsets
+)
+{
+	auto &glPipelineLayout = static_cast<const GLShaderPipelineLayout&>(pipelineLayout);
+	auto *shader = glPipelineLayout.GetShader();
+	if(shader == nullptr)
+		return false;
+	return RecordBindDescriptorSets(bindPoint,*shader,glPipelineLayout.GetPipelineIndex(),firstSet,descSets,dynamicOffsets);
+}
 bool prosper::GLCommandBuffer::RecordPushConstants(const IShaderPipelineLayout &pipelineLayout,ShaderStageFlags stageFlags,uint32_t offset,uint32_t size,const void *data)
 {
 	auto &glPipelineLayout = static_cast<const GLShaderPipelineLayout&>(pipelineLayout);
