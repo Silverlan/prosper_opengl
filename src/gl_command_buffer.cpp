@@ -416,14 +416,22 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(
 }
 bool prosper::GLCommandBuffer::RecordBindDescriptorSets(
 	PipelineBindPoint bindPoint,const IShaderPipelineLayout &pipelineLayout,uint32_t firstSet,
-	const std::vector<prosper::IDescriptorSet*> &descSets,const std::vector<uint32_t> dynamicOffsets
+	uint32_t numDescSets,const prosper::IDescriptorSet * const *descSets,uint32_t numDynamicOffsets,const uint32_t *dynamicOffsets
 )
 {
 	auto &glPipelineLayout = static_cast<const GLShaderPipelineLayout&>(pipelineLayout);
 	auto *shader = glPipelineLayout.GetShader();
 	if(shader == nullptr)
 		return false;
-	return RecordBindDescriptorSets(bindPoint,*shader,glPipelineLayout.GetPipelineIndex(),firstSet,descSets,dynamicOffsets);
+	std::vector<prosper::IDescriptorSet*> vDescSets;
+	vDescSets.reserve(numDescSets);
+	for(auto i=decltype(numDescSets){0u};i<numDescSets;++i)
+		vDescSets.push_back(const_cast<prosper::IDescriptorSet*>(descSets[i]));
+	std::vector<uint32_t> vDynamicOffsets;
+	vDynamicOffsets.reserve(numDynamicOffsets);
+	for(auto i=decltype(numDynamicOffsets){0u};i<numDynamicOffsets;++i)
+		vDynamicOffsets.push_back(dynamicOffsets[i]);
+	return RecordBindDescriptorSets(bindPoint,*shader,glPipelineLayout.GetPipelineIndex(),firstSet,vDescSets,vDynamicOffsets);
 }
 bool prosper::GLCommandBuffer::RecordPushConstants(const IShaderPipelineLayout &pipelineLayout,ShaderStageFlags stageFlags,uint32_t offset,uint32_t size,const void *data)
 {

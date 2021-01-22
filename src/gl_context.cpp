@@ -404,6 +404,19 @@ bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader,std::
 		glslCodePerStage.emplace_back(std::move(*glslCode));
 		glslCodeStages.push_back(stage->stage);
 	}
+	for(auto &code : glslCodePerStage)
+	{
+		auto posConstantId = code.find("layout(constant_id");
+		while(posConstantId != std::string::npos)
+		{
+			auto posConstantIdEnd = code.find(")",posConstantId);
+			if(posConstantIdEnd != std::string::npos)
+			{
+				code = code.substr(0,posConstantId) +code.substr(posConstantIdEnd +1);
+			}
+			posConstantId = code.find("layout(constant_id",posConstantId +1);
+		}
+	}
 	return util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage,outInfoLog);
 }
 bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
