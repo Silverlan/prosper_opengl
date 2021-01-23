@@ -85,6 +85,10 @@ namespace prosper
 			prosper::ShaderStageData &stage,PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
 		) override;
 		virtual std::optional<PipelineID> AddPipeline(
+			prosper::Shader &shader,PipelineID shaderPipelineId,const prosper::RayTracingPipelineCreateInfo &createInfo,
+			prosper::ShaderStageData &stage,PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
+		) override {return {};} // Unsupported
+		virtual std::optional<PipelineID> AddPipeline(
 			prosper::Shader &shader,PipelineID shaderPipelineId,
 			const prosper::GraphicsPipelineCreateInfo &createInfo,IRenderPass &rp,
 			prosper::ShaderStageData *shaderStageFs=nullptr,
