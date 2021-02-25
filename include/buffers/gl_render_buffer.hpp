@@ -26,8 +26,11 @@ namespace prosper
 		GLuint GetGLVertexArrayObject() const;
 	private:
 		GLRenderBuffer(
-			prosper::IPrContext &context,const std::vector<prosper::IBuffer*> &buffers,const std::optional<IndexBufferInfo> &indexBufferInfo={}
+			prosper::IPrContext &context,const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo={}
 		);
+		virtual void Reload() override;
+		const prosper::GraphicsPipelineCreateInfo &m_graphicsPipelineCreateInfo;
+		std::vector<prosper::DeviceSize> m_offsets;
 		GLuint m_vao;
 	};
 };

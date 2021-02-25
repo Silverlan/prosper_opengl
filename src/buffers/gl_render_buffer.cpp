@@ -10,31 +10,39 @@
 using namespace prosper;
 
 GLRenderBuffer::GLRenderBuffer(
-	prosper::IPrContext &context,const std::vector<prosper::IBuffer*> &buffers,const std::optional<IndexBufferInfo> &indexBufferInfo
+	prosper::IPrContext &context,const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
-	: IRenderBuffer{context,buffers,indexBufferInfo}
+	: IRenderBuffer{context,buffers,indexBufferInfo},m_offsets{offsets},m_graphicsPipelineCreateInfo{pipelineCreateInfo}
 {}
 GLRenderBuffer::~GLRenderBuffer()
 {
 	glDeleteVertexArrays(1,&m_vao);
 }
 GLuint GLRenderBuffer::GetGLVertexArrayObject() const {return m_vao;}
+void GLRenderBuffer::Reload()
+{
+	GLint oldVao;
+	glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&oldVao);
+	glBindVertexArray(m_vao);
+	std::vector<prosper::IBuffer*> buffers;
+	buffers.reserve(m_buffers.size());
+	for(auto &buf : m_buffers)
+		buffers.push_back(buf.get());
+	static_cast<GLContext&>(GetContext()).BindVertexBuffers(m_graphicsPipelineCreateInfo,buffers,0u,m_offsets);
+	if(m_indexBufferInfo.has_value())
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,m_indexBufferInfo->buffer->GetAPITypeRef<GLBuffer>().GetGLBuffer());
+	glBindVertexArray(oldVao);
+}
 std::shared_ptr<GLRenderBuffer> GLRenderBuffer::Create(
 	prosper::GLContext &context,const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,
 	const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
 {
-	GLint oldVao;
-	glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&oldVao);
 	GLuint vao;
 	glCreateVertexArrays(1,&vao);
-	glBindVertexArray(vao);
-	context.BindVertexBuffers(pipelineCreateInfo,buffers,0u,offsets);
-	if(indexBufferInfo.has_value())
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferInfo->buffer->GetAPITypeRef<GLBuffer>().GetGLBuffer());
-	glBindVertexArray(oldVao);
 
-	auto buf = std::shared_ptr<GLRenderBuffer>{new GLRenderBuffer{context,buffers,indexBufferInfo}};
+	auto buf = std::shared_ptr<GLRenderBuffer>{new GLRenderBuffer{context,pipelineCreateInfo,buffers,offsets,indexBufferInfo}};
 	buf->m_vao = vao;
+	buf->Reload();
 	return buf;
 }
