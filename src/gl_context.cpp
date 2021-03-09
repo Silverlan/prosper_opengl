@@ -982,12 +982,12 @@ std::shared_ptr<prosper::IImageView> prosper::GLContext::DoCreateImageView(
 {
 	return GLImageView::Create(*this,img,createInfo,imgViewType,aspectMask);
 }
-std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const prosper::util::ImageCreateInfo &pcreateInfo,const ImageData &imgData)
+std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const util::ImageCreateInfo &pcreateInfo,const std::function<const uint8_t*(uint32_t layer,uint32_t mipmap,uint32_t &dataSize,uint32_t &rowSize)> &getImageData)
 {
 	auto createInfo = pcreateInfo;
 	if((createInfo.flags &prosper::util::ImageCreateInfo::Flags::Cubemap) != prosper::util::ImageCreateInfo::Flags::None)
 		createInfo.layers = 6u;
-	return GLImage::Create(*this,createInfo,imgData);
+	return GLImage::Create(*this,createInfo,getImageData);
 }
 std::shared_ptr<prosper::IRenderPass> prosper::GLContext::CreateRenderPass(const prosper::util::RenderPassCreateInfo &renderPassInfo)
 {

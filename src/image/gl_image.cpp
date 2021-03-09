@@ -45,7 +45,7 @@ static void test_cubemap()
 }
 #endif
 
-std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,const IPrContext::ImageData &imgData)
+std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util::ImageCreateInfo &createInfo,const std::function<const uint8_t*(uint32_t layer,uint32_t mipmap,uint32_t &dataSize,uint32_t &rowSize)> &getImageData)
 {
 	auto isCubemap = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::Cubemap);
 	auto type = GetImageType(createInfo);
@@ -67,15 +67,19 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 	auto img = std::shared_ptr<GLImage>{new GLImage{context,createInfo,tex,pixelFormat}};
 	if(static_cast<GLContext&>(context).CheckResult() == false)
 		return nullptr;
-	for(auto iLayer=decltype(imgData.size()){0u};iLayer<imgData.size();++iLayer)
+	auto numMipmaps = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::FullMipmapChain) ? util::calculate_mipmap_count(createInfo.width,createInfo.height) : 1u;
+	for(auto iLayer=decltype(createInfo.layers){0u};iLayer<createInfo.layers;++iLayer)
 	{
-		auto &layerData = imgData.at(iLayer);
-		for(auto iMipmap=decltype(layerData.size()){0u};iMipmap<layerData.size();++iMipmap)
+		for(auto iMipmap=decltype(numMipmaps){0u};iMipmap<numMipmaps;++iMipmap)
 		{
 			auto w = img->GetWidth(iMipmap);
 			auto h = img->GetHeight(iMipmap);
-			auto size = img->GetLayerSize(w,h);
-			if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,size,layerData.at(iMipmap)) == false)
+			uint32_t rowSize = img->GetLayerSize(w,1);
+			uint32_t dataSize = img->GetLayerSize(w,h);
+			auto *mipmapData = getImageData(iLayer,iMipmap,dataSize,rowSize);
+			if(mipmapData == nullptr)
+				continue;
+			if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,dataSize,mipmapData) == false)
 				return false;
 		}
 	}

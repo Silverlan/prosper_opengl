@@ -65,7 +65,7 @@ namespace prosper
 			util::BufferCreateInfo createInfo,
 			uint64_t maxTotalSize,float clampSizeToAvailableGPUMemoryPercentage=1.f,const void *data=nullptr
 		) override;
-		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo,const ImageData &imgData={}) override;
+		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo,const std::function<const uint8_t*(uint32_t layer,uint32_t mipmap,uint32_t &dataSize,uint32_t &rowSize)> &getImageData=nullptr) override;
 
 		virtual void Flush() override;
 		virtual Result WaitForFence(const IFence &fence,uint64_t timeout=std::numeric_limits<uint64_t>::max()) const override;

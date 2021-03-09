@@ -17,7 +17,7 @@ namespace prosper
 		: public prosper::IImage
 	{
 	public:
-		static std::shared_ptr<IImage> Create(IPrContext &context,const util::ImageCreateInfo &createInfo,const IPrContext::ImageData &imgData);
+		static std::shared_ptr<IImage> Create(IPrContext &context,const util::ImageCreateInfo &createInfo,const std::function<const uint8_t*(uint32_t layer,uint32_t mipmap,uint32_t &dataSize,uint32_t &rowSize)> &getImageData);
 		static GLenum GetImageType(const util::ImageCreateInfo &createInfo);
 		static bool IsLayered(const util::ImageCreateInfo &createInfo);
 
