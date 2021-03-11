@@ -67,20 +67,23 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 	auto img = std::shared_ptr<GLImage>{new GLImage{context,createInfo,tex,pixelFormat}};
 	if(static_cast<GLContext&>(context).CheckResult() == false)
 		return nullptr;
-	auto numMipmaps = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::FullMipmapChain) ? util::calculate_mipmap_count(createInfo.width,createInfo.height) : 1u;
-	for(auto iLayer=decltype(createInfo.layers){0u};iLayer<createInfo.layers;++iLayer)
+	if(getImageData)
 	{
-		for(auto iMipmap=decltype(numMipmaps){0u};iMipmap<numMipmaps;++iMipmap)
+		auto numMipmaps = umath::is_flag_set(createInfo.flags,util::ImageCreateInfo::Flags::FullMipmapChain) ? util::calculate_mipmap_count(createInfo.width,createInfo.height) : 1u;
+		for(auto iLayer=decltype(createInfo.layers){0u};iLayer<createInfo.layers;++iLayer)
 		{
-			auto w = img->GetWidth(iMipmap);
-			auto h = img->GetHeight(iMipmap);
-			uint32_t rowSize = img->GetLayerSize(w,1);
-			uint32_t dataSize = img->GetLayerSize(w,h);
-			auto *mipmapData = getImageData(iLayer,iMipmap,dataSize,rowSize);
-			if(mipmapData == nullptr)
-				continue;
-			if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,dataSize,mipmapData) == false)
-				return false;
+			for(auto iMipmap=decltype(numMipmaps){0u};iMipmap<numMipmaps;++iMipmap)
+			{
+				auto w = img->GetWidth(iMipmap);
+				auto h = img->GetHeight(iMipmap);
+				uint32_t rowSize = img->GetLayerSize(w,1);
+				uint32_t dataSize = img->GetLayerSize(w,h);
+				auto *mipmapData = getImageData(iLayer,iMipmap,dataSize,rowSize);
+				if(mipmapData == nullptr)
+					continue;
+				if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,dataSize,mipmapData) == false)
+					return false;
+			}
 		}
 	}
 	static_cast<GLContext&>(context).CheckResult();
