@@ -73,7 +73,7 @@ namespace prosper
 		virtual bool RecordEndOcclusionQuery(const OcclusionQuery &query) const override;
 		virtual bool WriteTimestampQuery(const TimestampQuery &query) const override;
 		virtual bool ResetQuery(const Query &query) const override;
-		virtual bool RecordPresentImage(IImage &img,uint32_t swapchainImgIndex) override;
+		virtual bool RecordPresentImage(IImage &img,IImage &swapchainImg,IFramebuffer &swapchainFramebuffer) override;
 
 		GLContext &GetContext() const;
 	protected:

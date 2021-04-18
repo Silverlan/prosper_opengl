@@ -19,6 +19,7 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include "gl_command_buffer.hpp"
+#include "gl_window.hpp"
 #include "shader/prosper_shader.hpp"
 #include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
@@ -170,9 +171,7 @@ std::shared_ptr<prosper::GLContext> prosper::GLContext::Create(const std::string
 }
 prosper::GLContext::GLContext(const std::string &appName,bool bEnableValidation)
 	: IPrContext{appName,bEnableValidation}
-{
-	m_numSwapchainImages = 2u;
-}
+{}
 prosper::GLContext::~GLContext()
 {
 	m_pipelines.clear();
@@ -265,6 +264,18 @@ static std::string error_to_string(GLenum err)
 	}
 }
 
+std::shared_ptr<prosper::Window> prosper::GLContext::CreateWindow(const WindowSettings &windowCreationInfo)
+{
+	if(m_window)
+		return nullptr; // Only one window supported
+	auto window = GLWindow::Create(windowCreationInfo,*this);
+	if(!window)
+		return nullptr;
+	window->ReloadSwapchain();
+	m_windows.push_back(window);
+	return window;
+}
+
 prosper::GLBuffer &prosper::GLContext::GetPushConstantBuffer() const {return m_pushConstantBuffer->GetAPITypeRef<GLBuffer>();}
 
 std::optional<GLuint> prosper::GLContext::GetPipelineProgram(PipelineID pipelineId) const
@@ -287,19 +298,21 @@ void prosper::GLContext::ReloadWindow()
 {
 	WaitIdle();
 
-	auto oldSize = (m_glfwWindow != nullptr) ? m_glfwWindow->GetSize() : Vector2i();
-	auto w = m_windowCreationInfo->width;
-	auto h = m_windowCreationInfo->height;
-	m_glfwWindow->SetSize(Vector2i{w,h});
-	m_glfwWindow->UpdateWindow(*m_windowCreationInfo);
+	auto &glWindow = static_cast<GLWindow&>(*m_window);
+	auto oldSize = glWindow->GetSize();
+	auto &settings = glWindow.m_settings;
+	auto w = settings.width;
+	auto h = settings.height;
+	glWindow->SetSize(Vector2i{w,h});
+	glWindow->UpdateWindow(settings);
 
-	auto actualWindowSize = m_glfwWindow->GetSize();
+	auto actualWindowSize = glWindow->GetSize();
 	w = actualWindowSize.x;
 	h = actualWindowSize.y;
-	m_windowCreationInfo->width = w;
-	m_windowCreationInfo->height = h;
+	settings.width = w;
+	settings.height = h;
 
-	for(auto &img : m_swapchainImages)
+	for(auto &img : glWindow.m_swapchainImages)
 	{
 		auto &createInfo = const_cast<prosper::util::ImageCreateInfo&>(img->GetCreateInfo());
 		createInfo.width = w;
@@ -321,43 +334,6 @@ void prosper::GLContext::InitCommandBuffers()
 	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(*this,prosper::QueueFamilyType::Universal);
 	cmdBuffer->SetDebugName("swapchain_cmd" +std::to_string(0));
 	m_commandBuffers = {cmdBuffer,cmdBuffer};
-}
-
-void prosper::GLContext::InitWindow()
-{
-	auto &appName = GetAppName();
-	/* Create a window */
-	//m_windowPtr = Anvil::WindowFactory::create_window(platform,appName,width,height,true,std::bind(&Context::DrawFrame,this));
-
-	// TODO: Clean this up
-	m_glfwWindow = nullptr;
-	GLFW::poll_events();
-	m_windowCreationInfo->api = GLFW::WindowCreationInfo::API::OpenGL;
-	if(IsValidationEnabled())
-		m_windowCreationInfo->flags |= GLFW::WindowCreationInfo::Flags::DebugContext;
-	m_glfwWindow = GLFW::Window::Create(*m_windowCreationInfo); // TODO: Release
-
-	const char *errDesc;
-	auto err = glfwGetError(&errDesc);
-	if(err != GLFW_NO_ERROR)
-	{
-		std::cout<<"Error retrieving GLFW window handle: "<<errDesc<<std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-		exit(EXIT_FAILURE);
-	}
-
-	// GLFW does not guarantee to actually use the size which was specified,
-	// in some cases it may change, so we have to retrieve it again here
-	auto actualWindowSize = m_glfwWindow->GetSize();
-	m_windowCreationInfo->width = actualWindowSize.x;
-	m_windowCreationInfo->height = actualWindowSize.y;
-
-	m_glfwWindow->SetResizeCallback([](GLFW::Window &window,Vector2i size) {
-		std::cout<<"Resizing..."<<std::endl; // TODO
-	});
-	glfwMakeContextCurrent(const_cast<GLFWwindow*>(m_glfwWindow->GetGLFWWindow()));
-
-	OnWindowInitialized();
 }
 
 bool prosper::GLContext::IsPresentationModeSupported(prosper::PresentModeKHR presentMode) const
@@ -694,7 +670,6 @@ bool prosper::GLContext::ClearPipeline(bool graphicsShader,PipelineID pipelineId
 	m_freePipelineIndices.push(pipelineId);
 	return true;
 }
-uint32_t prosper::GLContext::GetLastAcquiredSwapchainImageIndex() const {return m_n_swapchain_image;}
 
 void prosper::GLContext::Flush() {glFlush();}
 prosper::Result prosper::GLContext::WaitForFence(const IFence &fence,uint64_t timeout) const
@@ -733,10 +708,11 @@ bool prosper::GLContext::QueryResult(const Query &query,uint64_t &r) const
 void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_ptr<prosper::IPrimaryCommandBuffer>&,uint32_t)> &drawFrame)
 {
 	// TODO: Wait for fences?
-	m_n_swapchain_image = (m_n_swapchain_image == 1) ? 0 : 1;
+	auto &glWindow = static_cast<GLWindow&>(*m_window);
+	glWindow.m_lastAcquiredSwapchainImageIndex = (glWindow.m_lastAcquiredSwapchainImageIndex == 1) ? 0 : 1;
 	ClearKeepAliveResources();
 
-	auto &cmdBuffer = m_commandBuffers.at(m_n_swapchain_image);
+	auto &cmdBuffer = m_commandBuffers.at(glWindow.m_lastAcquiredSwapchainImageIndex);
 	// TODO: Start recording?
 	cmdBuffer->StartRecording(false,true);
 	umath::set_flag(m_stateFlags,StateFlags::IsRecording);
@@ -747,7 +723,7 @@ void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_pt
 		f(*cmdBuffer);
 		m_scheduledBufferUpdates.pop();
 	}
-	drawFrame(GetDrawCommandBuffer(),m_n_swapchain_image);
+	drawFrame(GetDrawCommandBuffer(),glWindow.m_lastAcquiredSwapchainImageIndex);
 
 	/* Close the recording process */
 	umath::set_flag(m_stateFlags,StateFlags::IsRecording,false);
@@ -755,7 +731,7 @@ void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_pt
 	// TODO: Submit command buffer?
 	
 	//if(m_glfwWindow->IsVSyncEnabled())
-		m_glfwWindow->SwapBuffers();
+		(*m_window)->SwapBuffers();
 	//else
 	//	glFlush();
 
@@ -858,34 +834,7 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 	m_shaderManager = std::make_unique<ShaderManager>(*this);
 	InitPushConstantBuffer();
 	InitTemporaryBuffer();
-	InitSwapchainImages();
 	CheckResult();
-}
-
-void prosper::GLContext::InitSwapchainImages()
-{
-	util::ImageCreateInfo imgCreateInfo {};
-	imgCreateInfo.format = prosper::Format::R8G8B8A8_UNorm;
-	imgCreateInfo.width = GetWindowWidth();
-	imgCreateInfo.height = GetWindowHeight();
-	imgCreateInfo.memoryFeatures = prosper::MemoryFeatureFlags::GPUBulk;
-	imgCreateInfo.layers = 1;
-	imgCreateInfo.postCreateLayout = prosper::ImageLayout::ColorAttachmentOptimal;
-	imgCreateInfo.tiling = prosper::ImageTiling::Optimal;
-	imgCreateInfo.usage = prosper::ImageUsageFlags::TransferDstBit;
-	imgCreateInfo.flags = util::ImageCreateInfo::Flags::DontAllocateMemory;
-	auto img = std::shared_ptr<GLImage>{new GLImage{*this,imgCreateInfo,0,GL_RGBA}};
-	m_swapchainImages = {img,img};
-
-	prosper::util::ImageViewCreateInfo imgViewCreateInfo {};
-	imgViewCreateInfo.baseLayer = 0;
-	imgViewCreateInfo.baseMipmap = 0;
-	imgViewCreateInfo.mipmapLevels = 1;
-	imgViewCreateInfo.levelCount = 1;
-	imgViewCreateInfo.format = prosper::Format::R8G8B8A8_UNorm;
-	auto imgView = GLImageView::Create(*this,*img,imgViewCreateInfo,prosper::ImageViewType::e2D,prosper::ImageAspectFlags::ColorBit);
-	auto framebuffer = std::shared_ptr<GLFramebuffer>{new GLFramebuffer{*this,{imgView},imgCreateInfo.width,imgCreateInfo.height,1,1,0}};
-	m_swapchainFramebuffers = {framebuffer,framebuffer};
 }
 
 void prosper::GLContext::InitPushConstantBuffer()

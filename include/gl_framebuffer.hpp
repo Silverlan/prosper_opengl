@@ -12,6 +12,7 @@
 namespace prosper
 {
 	class GLContext;
+	class GLWindow;
 	class DLLPROSPER_GL GLFramebuffer
 		: public prosper::IFramebuffer
 	{
@@ -21,6 +22,7 @@ namespace prosper
 			uint32_t width,uint32_t height,uint32_t depth,uint32_t layers
 		);
 		friend GLContext;
+		friend GLWindow;
 
 		virtual ~GLFramebuffer() override;
 		GLuint GetGLFramebuffer() const {return m_framebuffer;}

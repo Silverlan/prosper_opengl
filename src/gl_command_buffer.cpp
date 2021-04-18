@@ -688,7 +688,7 @@ bool prosper::GLCommandBuffer::ResetQuery(const Query &query) const
 	return false; // TODO
 }
 
-bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,uint32_t swapchainImgIndex)
+bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,IImage &swapchainImg,IFramebuffer &swapchainFramebuffer)
 {
 	auto &context = GetContext();
 	auto *shaderFlipY = context.GetFlipYShader();
@@ -699,7 +699,7 @@ bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,uint32_t swapchain
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0,context.GetSwapchainImage(swapchainImgIndex),context.GetSwapchainFramebuffer(swapchainImgIndex));
+	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0,&swapchainImg,&swapchainFramebuffer);
 	if(shaderFlipY->BeginDraw(std::dynamic_pointer_cast<prosper::IPrimaryCommandBuffer>(shared_from_this())))
 	{
 		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());

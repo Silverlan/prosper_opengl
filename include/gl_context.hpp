@@ -40,6 +40,7 @@ namespace prosper
 		virtual std::string GetAPIIdentifier() const override {return "OpenGL";}
 		virtual std::string GetAPIAbbreviation() const override {return "GL";}
 		virtual bool WaitForCurrentSwapchainCommandBuffer(std::string &outErrMsg) override;
+		virtual std::shared_ptr<Window> CreateWindow(const WindowSettings &windowCreationInfo) override;
 
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
@@ -100,7 +101,6 @@ namespace prosper
 			PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
 		) override;
 		virtual bool ClearPipeline(bool graphicsShader,PipelineID pipelineId) override;
-		virtual uint32_t GetLastAcquiredSwapchainImageIndex() const override;
 
 		virtual std::shared_ptr<prosper::IQueryPool> CreateQueryPool(QueryType queryType,uint32_t maxConcurrentQueries) override;
 		virtual std::shared_ptr<prosper::IQueryPool> CreateQueryPool(QueryPipelineStatisticFlags statsFlags,uint32_t maxConcurrentQueries) override;
@@ -136,7 +136,6 @@ namespace prosper
 		bool BindVertexBuffers(const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<IBuffer*> &buffers,uint32_t startBinding,const std::vector<DeviceSize> &offsets,uint32_t *optOutAbsAttrId=nullptr);
 	protected:
 		GLContext(const std::string &appName,bool bEnableValidation=false);
-		void InitWindow();
 		void InitCommandBuffers();
 		virtual std::shared_ptr<IUniformResizableBuffer> DoCreateUniformResizableBuffer(
 			const util::BufferCreateInfo &createInfo,uint64_t bufferInstanceSize,
@@ -152,7 +151,6 @@ namespace prosper
 		virtual void ReloadSwapchain() override;
 
 		virtual void InitAPI(const CreateInfo &createInfo) override;
-		void InitSwapchainImages();
 		void InitPushConstantBuffer();
 		void InitShaderPipeline(prosper::Shader &shader,PipelineID pipelineId,PipelineID shaderPipelineId);
 	private:

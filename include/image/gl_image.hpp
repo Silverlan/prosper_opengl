@@ -13,6 +13,7 @@ namespace prosper
 {
 	class GLContext;
 	class GLFramebuffer;
+	class GLWindow;
 	class DLLPROSPER_GL GLImage
 		: public prosper::IImage
 	{
@@ -38,6 +39,7 @@ namespace prosper
 		std::shared_ptr<GLFramebuffer> GetOrCreateFramebuffer(uint32_t baseLayerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount);
 	private:
 		friend GLContext;
+		friend GLWindow;
 		GLImage(IPrContext &context,const util::ImageCreateInfo &createInfo,GLuint texture,GLenum pixelFormat);
 		virtual bool DoSetMemoryBuffer(IBuffer &buffer) override;
 		void InitializeSubresourceLayouts();
