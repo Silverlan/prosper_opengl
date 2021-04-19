@@ -14,7 +14,12 @@ using namespace prosper;
 
 std::shared_ptr<GLWindow> GLWindow::Create(const WindowSettings &windowCreationInfo,prosper::IPrContext &context)
 {
-	return std::shared_ptr<GLWindow>{new GLWindow{context,windowCreationInfo}};
+	auto window = std::shared_ptr<GLWindow>{new GLWindow{context,windowCreationInfo},[](GLWindow *window) {
+		window->Release();
+		delete window;
+	}};
+	window->InitWindow();
+	return window;
 }
 
 void GLWindow::InitWindow()
