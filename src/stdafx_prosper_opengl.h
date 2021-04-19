@@ -5,6 +5,7 @@
 #ifdef _WIN32
 #pragma message("Compiling precompiled headers.\n")
 #endif
+#include "gl_api.hpp"
 #include <prosper_context.hpp>
 #include <prosper_util.hpp>
 #include <prosper_context_object.hpp>
