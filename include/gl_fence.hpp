@@ -21,6 +21,7 @@ namespace prosper
 		virtual bool IsSet() const override;
 		virtual bool Reset() const override;
 		void Wait();
+		virtual const void *GetInternalHandle() const override {return m_fence;}
 	private:
 		void Clear() const;
 		GLFence(IPrContext &context);

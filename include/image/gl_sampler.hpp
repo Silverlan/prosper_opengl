@@ -19,6 +19,7 @@ namespace prosper
 
 		GLuint GetGLSampler() const;
 		virtual ~GLSampler() override;
+		virtual const void *GetInternalHandle() const override {return reinterpret_cast<void*>(m_sampler);}
 	private:
 		GLSampler(IPrContext &context,const util::SamplerCreateInfo &samplerCreateInfo,GLuint sampler);
 		virtual bool DoUpdate() override;

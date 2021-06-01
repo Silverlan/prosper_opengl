@@ -30,6 +30,7 @@ namespace prosper
 		virtual ~GLBuffer() override;
 		virtual std::shared_ptr<IBuffer> CreateSubBuffer(DeviceSize offset,DeviceSize size,const std::function<void(IBuffer&)> &onDestroyedCallback=nullptr) override;
 		GLuint GetGLBuffer() const {return m_buffer;}
+		virtual const void *GetInternalHandle() const override {return reinterpret_cast<void*>(GetGLBuffer());}
 	private:
 		GLBuffer(IPrContext &context,const util::BufferCreateInfo &bufCreateInfo,DeviceSize startOffset,DeviceSize size,GLuint bufIdx);
 		bool ValidateBufferRange(DeviceSize offset,DeviceSize size) const;
