@@ -82,7 +82,7 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context,const prosper::util:
 				if(mipmapData == nullptr)
 					continue;
 				if(img->WriteImageData(0,0,w,h,iLayer,iMipmap,dataSize,mipmapData) == false)
-					return false;
+					return nullptr;
 			}
 		}
 	}
