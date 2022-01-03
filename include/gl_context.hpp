@@ -42,6 +42,9 @@ namespace prosper
 		virtual bool WaitForCurrentSwapchainCommandBuffer(std::string &outErrMsg) override;
 		virtual std::shared_ptr<Window> CreateWindow(const WindowSettings &windowCreationInfo) override;
 
+		virtual prosper::FeatureSupport AreFormatFeaturesSupported(Format format,FormatFeatureFlags featureFlags,std::optional<ImageTiling> tiling) const override;
+		virtual void BakeShaderPipeline(prosper::PipelineID pipelineId,prosper::PipelineBindPoint pipelineType) override;
+
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
 

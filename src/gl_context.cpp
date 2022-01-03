@@ -183,6 +183,21 @@ bool prosper::GLContext::IsImageFormatSupported(
 {
 	return true; // TODO
 }
+prosper::FeatureSupport prosper::GLContext::AreFormatFeaturesSupported(Format format,FormatFeatureFlags featureFlags,std::optional<ImageTiling> tiling) const
+{
+	if(util::is_compressed_format(format))
+	{
+		return ((featureFlags &(
+			FormatFeatureFlags::BlitDstBit | FormatFeatureFlags::ColorAttachmentBit | FormatFeatureFlags::DepthStencilAttachmentBit |
+			FormatFeatureFlags::StorageTexelBufferBit | FormatFeatureFlags::UniformTexelBufferBit | FormatFeatureFlags::VertexBufferBit
+			)) == FormatFeatureFlags{}) ? prosper::FeatureSupport::Supported : prosper::FeatureSupport::Unsupported;
+	}
+	return prosper::FeatureSupport::Supported;
+}
+void prosper::GLContext::BakeShaderPipeline(prosper::PipelineID pipelineId,prosper::PipelineBindPoint pipelineType)
+{
+	// Nothing to be done
+}
 uint32_t prosper::GLContext::GetUniversalQueueFamilyIndex() const {return 0;}
 prosper::util::Limits prosper::GLContext::GetPhysicalDeviceLimits() const
 {
@@ -854,7 +869,7 @@ std::shared_ptr<prosper::IBuffer> prosper::GLContext::CreateBuffer(const prosper
 
 	if(umath::is_flag_set(createInfo.flags,prosper::util::BufferCreateInfo::Flags::DontAllocateMemory) == false)
 	{
-		// TODO: Remove Steam, Dynamic and Static flags?
+		// TODO: Remove Stream, Dynamic and Static flags?
 #if 0
 		auto usage = GL_STREAM_DRAW;
 		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Stream))

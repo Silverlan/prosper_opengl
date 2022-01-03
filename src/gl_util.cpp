@@ -513,6 +513,10 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_DEPTH_COMPONENT;
 		return GL_DEPTH_COMPONENT32F;
+	case prosper::Format::D32_SFloat_S8_UInt:
+		if(optOutPixelDataFormat)
+			*optOutPixelDataFormat = GL_DEPTH_COMPONENT;
+		return GL_DEPTH32F_STENCIL8;
 	case prosper::Format::BC1_RGB_UNorm_Block:
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RGB;

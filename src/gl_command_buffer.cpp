@@ -216,7 +216,10 @@ bool prosper::GLCommandBuffer::RecordSetDepthBias(float depthBiasConstantFactor,
 	glPolygonOffset(depthBiasSlopeFactor,depthBiasConstantFactor);
 	return true;
 }
-static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_t layerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount,const std::array<float,4> &clearColor,float clearDepth,bool depth)
+static void clear_image(
+	prosper::GLContext &context,prosper::IImage &img,uint32_t layerId,uint32_t layerCount,uint32_t baseMipmap,uint32_t mipmapCount,
+	const std::array<float,4> &clearColor,std::optional<float> clearDepth,std::optional<float> clearStencil
+)
 {
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
@@ -227,7 +230,7 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 
 	auto framebuffer = static_cast<prosper::GLImage&>(img).GetOrCreateFramebuffer(layerId,layerCount,baseMipmap,mipmapCount);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,static_cast<prosper::GLFramebuffer&>(*framebuffer).GetGLFramebuffer());
-	if(depth == false)
+	if(!clearDepth && !clearStencil)
 	{
 		glDisable(GL_SCISSOR_TEST);
 		glDisable(GL_STENCIL_TEST);
@@ -237,21 +240,35 @@ static void clear_image(prosper::GLContext &context,prosper::IImage &img,uint32_
 		context.CheckResult();
 		glClear(GL_COLOR_BUFFER_BIT);
 		context.CheckResult();
+		return;
 	}
-	else
-	{
-		glDisable(GL_SCISSOR_TEST);
-		glDisable(GL_STENCIL_TEST);
-		glDepthMask(GL_TRUE);
 
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	
+	if(clearDepth.has_value())
+	{
+		glDepthMask(GL_TRUE);
 		GLboolean depthWritesEnabled;
 		glGetBooleanv(GL_DEPTH_WRITEMASK,&depthWritesEnabled);
 		glDepthMask(GL_TRUE);
 
-		glClearDepth(clearDepth);
+		glClearDepth(*clearDepth);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glDepthMask(depthWritesEnabled);
+	}
+	if(clearStencil.has_value())
+	{
+		glStencilMask(GL_TRUE);
+		GLboolean stencilWritesEnabled;
+		glGetBooleanv(GL_STENCIL_WRITEMASK,&stencilWritesEnabled);
+		glStencilMask(GL_TRUE);
+
+		glClearStencil(*clearStencil);
+		glClear(GL_STENCIL_BUFFER_BIT);
+
+		glStencilMask(stencilWritesEnabled);
 	}
 }
 bool prosper::GLCommandBuffer::RecordClearImage(IImage &img,ImageLayout layout,const std::array<float,4> &clearColor,const prosper::util::ClearImageInfo &clearImageInfo)
@@ -278,25 +295,25 @@ bool prosper::GLCommandBuffer::RecordClearImage(IImage &img,ImageLayout layout,c
 	return GetContext().CheckResult();
 #endif
 }
-bool prosper::GLCommandBuffer::RecordClearImage(IImage &img,ImageLayout layout,float clearDepth,const prosper::util::ClearImageInfo &clearImageInfo)
+bool prosper::GLCommandBuffer::RecordClearImage(IImage &img,ImageLayout layout,std::optional<float> clearDepth,std::optional<uint32_t> clearStencil,const util::ClearImageInfo &clearImageInfo)
 {
 	if(IsPrimary() == false)
 		return false;
-	clear_image(GetContext(),img,clearImageInfo.subresourceRange.baseArrayLayer,clearImageInfo.subresourceRange.layerCount,clearImageInfo.subresourceRange.baseMipLevel,clearImageInfo.subresourceRange.levelCount,{},clearDepth,true);
+	clear_image(GetContext(),img,clearImageInfo.subresourceRange.baseArrayLayer,clearImageInfo.subresourceRange.layerCount,clearImageInfo.subresourceRange.baseMipLevel,clearImageInfo.subresourceRange.levelCount,{},clearDepth,clearStencil);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordClearAttachment(IImage &img,const std::array<float,4> &clearColor,uint32_t attId,uint32_t layerId,uint32_t layerCount)
 {
 	if(IsPrimary() == false)
 		return false;
-	clear_image(GetContext(),img,layerId,layerCount,0,std::numeric_limits<uint32_t>::max(),clearColor,0.f,false);
+	clear_image(GetContext(),img,layerId,layerCount,0,std::numeric_limits<uint32_t>::max(),clearColor,{},{});
 	return GetContext().CheckResult();
 }
-bool prosper::GLCommandBuffer::RecordClearAttachment(IImage &img,float clearDepth,uint32_t layerId)
+bool prosper::GLCommandBuffer::RecordClearAttachment(IImage &img,std::optional<float> clearDepth,std::optional<uint32_t> clearStencil,uint32_t layerId)
 {
 	if(IsPrimary() == false)
 		return false;
-	clear_image(GetContext(),img,layerId,1,0,std::numeric_limits<uint32_t>::max(),{},clearDepth,true);
+	clear_image(GetContext(),img,layerId,1,0,std::numeric_limits<uint32_t>::max(),{},clearDepth,clearStencil);
 	return GetContext().CheckResult();
 }
 bool prosper::GLCommandBuffer::RecordUpdateBuffer(IBuffer &buffer,uint64_t offset,uint64_t size,const void *data)
@@ -806,7 +823,10 @@ bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::Bu
 	bufferDst.Write(copyInfo.bufferOffset,pixelData.size() *sizeof(pixelData.front()),pixelData.data());
 	return GetContext().CheckResult();
 }
-bool prosper::GLCommandBuffer::DoRecordBlitImage(const prosper::util::BlitInfo &blitInfo,IImage &imgSrc,IImage &imgDst,const std::array<Offset3D,2> &srcOffsets,const std::array<Offset3D,2> &dstOffsets)
+bool prosper::GLCommandBuffer::DoRecordBlitImage(
+	const util::BlitInfo &blitInfo,IImage &imgSrc,IImage &imgDst,const std::array<Offset3D,2> &srcOffsets,
+	const std::array<Offset3D,2> &dstOffsets,std::optional<prosper::ImageAspectFlags> aspectFlags
+)
 {
 	if(util::is_compressed_format(imgDst.GetFormat()) || IsPrimary() == false)
 		return false; // Can't blit into a compressed format
@@ -836,8 +856,11 @@ bool prosper::GLCommandBuffer::DoRecordBlitImage(const prosper::util::BlitInfo &
 		return GetContext().CheckResult();
 	}
 	// These can affect blitting (despite the specifcation not making any mention about it)
+	if(aspectFlags.has_value() && umath::is_flag_set(*aspectFlags,ImageAspectFlags::StencilBit))
+		glEnable(GL_STENCIL_TEST);
+	else
+		glDisable(GL_STENCIL_TEST);
 	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_STENCIL_TEST);
 	glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
 	auto framebufferSrc = static_cast<GLImage&>(imgSrc).GetOrCreateFramebuffer(blitInfo.srcSubresourceLayer.baseArrayLayer,blitInfo.srcSubresourceLayer.layerCount,blitInfo.srcSubresourceLayer.mipLevel,1);
 	glBlitNamedFramebuffer(
@@ -910,15 +933,15 @@ bool prosper::GLPrimaryCommandBuffer::DoRecordBeginRenderPass(
 			if(layerId)
 				RecordClearAttachment(attImg,clearVal.depthStencil.depth,*layerId);
 			else
-				RecordClearAttachment(attImg,clearVal.depthStencil.depth);
+				RecordClearAttachment(attImg,clearVal.depthStencil.depth,{});
 		}
 		else
 		{
 			auto &clearCol = clearVal.color.float32;
 			if(layerId)
-				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,*layerId);
+				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,*layerId,1);
 			else
-				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,0u);
+				RecordClearAttachment(attImg,std::array<float,4>{clearCol[0],clearCol[1],clearCol[2],clearCol[3]},attId,0u,1);
 		}
 	}
 	return dynamic_cast<GLContext&>(IPrimaryCommandBuffer::GetContext()).CheckResult();

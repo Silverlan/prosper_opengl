@@ -12,7 +12,8 @@ using namespace prosper;
 GLRenderBuffer::GLRenderBuffer(
 	prosper::IPrContext &context,const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
-	: IRenderBuffer{context,buffers,indexBufferInfo},m_offsets{offsets},m_graphicsPipelineCreateInfo{pipelineCreateInfo}
+	: IRenderBuffer{context,buffers,indexBufferInfo},m_offsets{offsets},m_graphicsPipelineCreateInfo{pipelineCreateInfo},
+	m_vao{std::numeric_limits<decltype(m_vao)>::max()}
 {}
 GLRenderBuffer::~GLRenderBuffer()
 {
@@ -38,7 +39,7 @@ std::shared_ptr<GLRenderBuffer> GLRenderBuffer::Create(
 	const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
 {
-	GLuint vao;
+	GLuint vao = std::numeric_limits<GLuint>::max();
 	glCreateVertexArrays(1,&vao);
 
 	auto buf = std::shared_ptr<GLRenderBuffer>{new GLRenderBuffer{context,pipelineCreateInfo,buffers,offsets,indexBufferInfo}};
