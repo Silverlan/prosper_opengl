@@ -16,4 +16,4 @@ void ShaderFlipY::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pip
 	ShaderBaseImageProcessing::InitializeGfxPipeline(pipelineInfo,pipelineIdx);
 }
 
-bool ShaderFlipY::Draw(prosper::IDescriptorSet &descSetTexture) {return ShaderBaseImageProcessing::Draw(descSetTexture);}
+bool ShaderFlipY::RecordDraw(ShaderBindState &bindState,prosper::IDescriptorSet &descSetTexture) const {return ShaderBaseImageProcessing::RecordDraw(bindState,descSetTexture);}

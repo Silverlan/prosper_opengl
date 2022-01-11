@@ -124,7 +124,7 @@ namespace prosper
 		virtual std::shared_ptr<ISampler> CreateSampler(const util::SamplerCreateInfo &createInfo) override;
 		virtual std::shared_ptr<IRenderPass> CreateRenderPass(const util::RenderPassCreateInfo &renderPassInfo) override;
 		virtual std::shared_ptr<IDescriptorSetGroup> CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) override;
-		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(bool allowMt=true) override;
+		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(Window &window,bool allowMt=true) override;
 		virtual std::shared_ptr<IFramebuffer> CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments) override;
 		virtual std::unique_ptr<IShaderPipelineLayout> GetShaderPipelineLayout(const Shader &shader,uint32_t pipelineIdx=0u) const override;
 		virtual std::shared_ptr<IRenderBuffer> CreateRenderBuffer(

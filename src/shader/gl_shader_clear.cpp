@@ -20,18 +20,18 @@ void ShaderClear::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pip
 	ShaderGraphics::InitializeGfxPipeline(pipelineInfo,pipelineIdx);
 
 	AddVertexAttribute(pipelineInfo,VERTEX_ATTRIBUTE_POSITION);
-	AttachPushConstantRange(pipelineInfo,0,sizeof(Vector4),prosper::ShaderStageFlags::FragmentBit);
+	AttachPushConstantRange(pipelineInfo,pipelineIdx,0,sizeof(Vector4),prosper::ShaderStageFlags::FragmentBit);
 }
 
-bool ShaderClear::Draw()
+bool ShaderClear::RecordDraw(ShaderBindState &bindState) const
 {
 	auto vertBuffer = GetContext().GetCommonBufferCache().GetSquareVertexBuffer();
 	if(
-		RecordBindVertexBuffers({vertBuffer.get()}) == false ||
-		RecordDraw(GetContext().GetCommonBufferCache().GetSquareVertexCount()) == false
+		RecordBindVertexBuffers(bindState,{vertBuffer.get()}) == false ||
+		ShaderGraphics::RecordDraw(bindState,GetContext().GetCommonBufferCache().GetSquareVertexCount()) == false
 		)
 		return false;
 	return true;
 }
 
-bool ShaderClear::Draw(const Vector4 &color) {return RecordPushConstants(color) && Draw();}
+bool ShaderClear::RecordDraw(ShaderBindState &bindState,const Vector4 &color) const {return RecordPushConstants(bindState,color) && RecordDraw(bindState);}

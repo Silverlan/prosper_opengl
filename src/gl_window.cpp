@@ -65,7 +65,7 @@ void GLWindow::ReleaseWindow()
 	ReleaseSwapchain();
 	m_glfwWindow = nullptr;
 }
-void GLWindow::InitSwapchain()
+void GLWindow::DoInitSwapchain()
 {
 	auto size = m_glfwWindow->GetSize();
 	util::ImageCreateInfo imgCreateInfo {};
@@ -91,7 +91,7 @@ void GLWindow::InitSwapchain()
 	auto framebuffer = std::shared_ptr<GLFramebuffer>{new GLFramebuffer{GetContext(),{imgView},imgCreateInfo.width,imgCreateInfo.height,1,1,0}};
 	m_swapchainFramebuffers = {framebuffer,framebuffer};
 }
-void GLWindow::ReleaseSwapchain()
+void GLWindow::DoReleaseSwapchain()
 {
 	m_swapchainImages.clear();
 	m_swapchainFramebuffers.clear();

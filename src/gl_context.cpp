@@ -961,10 +961,10 @@ std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::CreateDescript
 {
 	return GLDescriptorSetGroup::Create(*this,descSetInfo);
 }
-std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(bool allowMt)
+std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(Window &window,bool allowMt)
 {
 	// OpenGL does not support multi-threaded rendering
-	return std::make_shared<StSwapCommandBufferGroup>(*this);
+	return std::make_shared<StSwapCommandBufferGroup>(window);
 }
 std::shared_ptr<prosper::IFramebuffer> prosper::GLContext::CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments)
 {

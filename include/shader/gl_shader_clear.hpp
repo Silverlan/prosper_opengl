@@ -20,9 +20,9 @@ namespace prosper
 		static prosper::ShaderGraphics::VertexAttribute VERTEX_ATTRIBUTE_POSITION;
 
 		ShaderClear(prosper::IPrContext &context,const std::string &identifier);
-		bool Draw(const Vector4 &color);
+		bool RecordDraw(ShaderBindState &bindState,const Vector4 &color) const;
 	protected:
-		virtual bool Draw() override;
+		virtual bool RecordDraw(ShaderBindState &bindState) const override;
 		virtual void InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipelineInfo,uint32_t pipelineIdx) override;
 	};
 };

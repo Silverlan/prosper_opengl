@@ -26,8 +26,8 @@ namespace prosper
 		using Window::Window;
 		virtual void InitWindow() override;
 		virtual void ReleaseWindow() override;
-		virtual void InitSwapchain() override;
-		virtual void ReleaseSwapchain() override;
+		virtual void DoInitSwapchain() override;
+		virtual void DoReleaseSwapchain() override;
 
 		uint32_t m_lastAcquiredSwapchainImageIndex = 0;
 	};

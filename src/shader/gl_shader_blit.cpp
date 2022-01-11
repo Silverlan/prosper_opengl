@@ -16,4 +16,4 @@ void ShaderBlit::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipe
 	ShaderBaseImageProcessing::InitializeGfxPipeline(pipelineInfo,pipelineIdx);
 }
 
-bool ShaderBlit::Draw(prosper::IDescriptorSet &descSetTexture) {return ShaderBaseImageProcessing::Draw(descSetTexture);}
+bool ShaderBlit::RecordDraw(ShaderBindState &bindState,prosper::IDescriptorSet &descSetTexture) const {return ShaderBaseImageProcessing::RecordDraw(bindState,descSetTexture);}

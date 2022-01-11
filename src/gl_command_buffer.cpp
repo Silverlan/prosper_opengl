@@ -717,11 +717,12 @@ bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,IImage &swapchainI
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0,&swapchainImg,&swapchainFramebuffer);
-	if(shaderFlipY->BeginDraw(std::dynamic_pointer_cast<prosper::IPrimaryCommandBuffer>(shared_from_this())))
+	ShaderBindState bindState {*this};
+	if(shaderFlipY->RecordBeginDraw(bindState))
 	{
 		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());
-		shaderFlipY->Draw();
-		shaderFlipY->EndDraw();
+		shaderFlipY->RecordDraw(bindState);
+		shaderFlipY->RecordEndDraw(bindState);
 	}
 
 	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0);
@@ -844,11 +845,12 @@ bool prosper::GLCommandBuffer::DoRecordBlitImage(
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebufferDst->GetGLFramebuffer());
 		static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,blitInfo.dstSubresourceLayer.baseArrayLayer,&imgDst,framebufferDst.get());
 		auto *shaderBlit = GetContext().GetBlitShader();
-		if(shaderBlit->BeginDraw(std::dynamic_pointer_cast<prosper::IPrimaryCommandBuffer>(shared_from_this())))
+		ShaderBindState bindState {*this};
+		if(shaderBlit->RecordBeginDraw(bindState))
 		{
 			glBindTextureUnit(0,static_cast<GLImage&>(imgSrc).GetGLImage());
-			shaderBlit->Draw();
-			shaderBlit->EndDraw();
+			shaderBlit->RecordDraw(bindState);
+			shaderBlit->RecordEndDraw(bindState);
 		}
 
 		static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0);
