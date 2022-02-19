@@ -212,8 +212,11 @@ std::optional<prosper::util::PhysicalDeviceImageFormatProperties> prosper::GLCon
 {
 	GLint samples = 1;
 	glGetInternalformativ(GL_RENDERBUFFER,util::to_opengl_image_format(query.format),GL_SAMPLES,1,&samples);
+	GLint maxExt = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxExt);
 	prosper::util::PhysicalDeviceImageFormatProperties props {};
 	props.sampleCount = static_cast<prosper::SampleCountFlags>(samples);
+	props.maxExtent = {static_cast<uint32_t>(maxExt),static_cast<uint32_t>(maxExt)};
 	return props;
 }
 bool prosper::GLContext::CheckFramebufferStatus(IFramebuffer &fb) const

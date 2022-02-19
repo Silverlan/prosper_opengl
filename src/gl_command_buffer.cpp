@@ -766,17 +766,23 @@ bool prosper::GLCommandBuffer::DoRecordCopyImage(const prosper::util::CopyInfo &
 	return DoRecordBlitImage(blitInfo,imgSrc,imgDst,srcOffsets,dstOffsets);
 }
 
-bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::BufferImageCopyInfo &copyInfo,IBuffer &bufferSrc,IImage &imgDst,uint32_t w,uint32_t h)
+bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::BufferImageCopyInfo &copyInfo,IBuffer &bufferSrc,IImage &imgDst)
 {
 	static std::vector<uint8_t> imgData {};
 	imgData.clear();
 	auto &glImgDst = static_cast<GLImage&>(imgDst);
 
-	if(util::is_compressed_format(imgDst.GetFormat()) && (w != imgDst.GetWidth(copyInfo.mipLevel) || h != imgDst.GetHeight(copyInfo.mipLevel)))
+	Vector2i imgExtent {};
+	if(copyInfo.imageExtent.has_value())
+		imgExtent = *copyInfo.imageExtent;
+	else
+		imgExtent = {imgDst.GetWidth(),imgDst.GetHeight()};
+	
+	if(util::is_compressed_format(imgDst.GetFormat()) && (imgExtent.x != imgDst.GetWidth(copyInfo.mipLevel) || imgExtent.y != imgDst.GetHeight(copyInfo.mipLevel)))
 		return false;
 	GLint size;
 	if(util::is_compressed_format(imgDst.GetFormat()) == false)
-		size = glImgDst.GetLayerSize(w,h);
+		size = glImgDst.GetLayerSize(imgExtent.x,imgExtent.y);
 	else
 	{
 		glGetTextureLevelParameteriv(glImgDst.GetGLImage(),copyInfo.mipLevel,GL_TEXTURE_COMPRESSED_IMAGE_SIZE,&size);
@@ -785,17 +791,23 @@ bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::Bu
 	imgData.resize(size);
 	for(auto iLayer=copyInfo.baseArrayLayer;iLayer<(copyInfo.baseArrayLayer +copyInfo.layerCount);++iLayer)
 	{
-		bufferSrc.Read(0,imgData.size(),imgData.data());
-		auto res = glImgDst.WriteImageData(0,0,w,h,iLayer,copyInfo.mipLevel,size,imgData.data());
+		bufferSrc.Read(copyInfo.bufferOffset,imgData.size(),imgData.data());
+		auto res = glImgDst.WriteImageData(copyInfo.imageOffset.x,copyInfo.imageOffset.y,imgExtent.x,imgExtent.y,iLayer,copyInfo.mipLevel,size,imgData.data());
 		if(res == false)
 			return false;
 	}
 	return GetContext().CheckResult();
 }
-bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::BufferImageCopyInfo &copyInfo,IImage &imgSrc,ImageLayout srcImageLayout,IBuffer &bufferDst,uint32_t w,uint32_t h)
+bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::BufferImageCopyInfo &copyInfo,IImage &imgSrc,ImageLayout srcImageLayout,IBuffer &bufferDst)
 {
 	auto &glImgDst = static_cast<GLImage&>(imgSrc);
 	auto format = imgSrc.GetFormat();
+
+	Vector2i imgExtent {};
+	if(copyInfo.imageExtent.has_value())
+		imgExtent = *copyInfo.imageExtent;
+	else
+		imgExtent = {imgSrc.GetWidth(),imgSrc.GetHeight()};
 
 	static std::vector<uint8_t> pixelData {};
 	if(util::is_compressed_format(format))
@@ -805,18 +817,18 @@ bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::Bu
 
 		pixelData.resize(size);
 		glGetCompressedTextureSubImage(
-			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
+			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,imgExtent.x,imgExtent.y,copyInfo.layerCount,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
 		);
 	}
 	else
 	{
-		auto size = w *h *util::get_byte_size(format) *copyInfo.layerCount;
+		auto size = imgExtent.x *imgExtent.y *util::get_byte_size(format) *copyInfo.layerCount;
 
 		pixelData.resize(size);
 		GLboolean normalized;
 		auto imgFormatType = util::to_opengl_image_format_type(glImgDst.GetFormat(),normalized);
 		glGetTextureSubImage(
-			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,w,h,copyInfo.layerCount,
+			glImgDst.GetGLImage(),copyInfo.mipLevel,0,0,copyInfo.baseArrayLayer,imgExtent.x,imgExtent.y,copyInfo.layerCount,
 			glImgDst.GetPixelDataFormat(),imgFormatType,pixelData.size() *sizeof(pixelData.front()),pixelData.data()
 		);
 	}
