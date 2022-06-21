@@ -12,7 +12,7 @@ using namespace prosper;
 GLRenderBuffer::GLRenderBuffer(
 	prosper::IPrContext &context,const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<prosper::IBuffer*> &buffers,const std::vector<prosper::DeviceSize> &offsets,const std::optional<IndexBufferInfo> &indexBufferInfo
 )
-	: IRenderBuffer{context,buffers,indexBufferInfo},m_offsets{offsets},m_graphicsPipelineCreateInfo{pipelineCreateInfo},
+	: IRenderBuffer{context,pipelineCreateInfo,buffers,offsets,indexBufferInfo},
 	m_vao{std::numeric_limits<decltype(m_vao)>::max()}
 {}
 GLRenderBuffer::~GLRenderBuffer()
@@ -29,7 +29,7 @@ void GLRenderBuffer::Reload()
 	buffers.reserve(m_buffers.size());
 	for(auto &buf : m_buffers)
 		buffers.push_back(buf.get());
-	static_cast<GLContext&>(GetContext()).BindVertexBuffers(m_graphicsPipelineCreateInfo,buffers,0u,m_offsets);
+	static_cast<GLContext&>(GetContext()).BindVertexBuffers(GetPipelineCreateInfo(),buffers,0u,m_offsets);
 	if(m_indexBufferInfo.has_value())
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,m_indexBufferInfo->buffer->GetAPITypeRef<GLBuffer>().GetGLBuffer());
 	glBindVertexArray(oldVao);

@@ -776,7 +776,7 @@ bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::Bu
 	if(copyInfo.imageExtent.has_value())
 		imgExtent = *copyInfo.imageExtent;
 	else
-		imgExtent = {imgDst.GetWidth(),imgDst.GetHeight()};
+		imgExtent = {imgDst.GetWidth(copyInfo.mipLevel),imgDst.GetHeight(copyInfo.mipLevel)};
 	
 	if(util::is_compressed_format(imgDst.GetFormat()) && (imgExtent.x != imgDst.GetWidth(copyInfo.mipLevel) || imgExtent.y != imgDst.GetHeight(copyInfo.mipLevel)))
 		return false;
@@ -807,7 +807,7 @@ bool prosper::GLCommandBuffer::DoRecordCopyImageToBuffer(const prosper::util::Bu
 	if(copyInfo.imageExtent.has_value())
 		imgExtent = *copyInfo.imageExtent;
 	else
-		imgExtent = {imgSrc.GetWidth(),imgSrc.GetHeight()};
+		imgExtent = {imgSrc.GetWidth(copyInfo.mipLevel),imgSrc.GetHeight(copyInfo.mipLevel)};
 
 	static std::vector<uint8_t> pixelData {};
 	if(util::is_compressed_format(format))
