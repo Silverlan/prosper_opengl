@@ -2,6 +2,7 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <prosper_util.hpp>
 #include "gl_command_buffer.hpp"
 #include "gl_context.hpp"
 #include "image/gl_image.hpp"
@@ -21,6 +22,7 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include <assert.h>
+#include <image/prosper_texture.hpp>
 
 static const auto SCISSOR_FLIP_Y = false;
 

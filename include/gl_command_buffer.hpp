@@ -9,6 +9,8 @@
 #include <prosper_includes.hpp>
 #include <prosper_command_buffer.hpp>
 
+#include <sharedutils/util_weak_handle.hpp>
+
 namespace prosper
 {
 	class GLContext;

@@ -5,6 +5,7 @@
 #include "gl_util.hpp"
 #include "gl_api.hpp"
 #include <cassert>
+#include <stdexcept>
 
 using namespace prosper;
 
