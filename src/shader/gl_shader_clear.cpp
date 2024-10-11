@@ -19,8 +19,8 @@ void ShaderClear::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pip
 {
 	ShaderGraphics::InitializeGfxPipeline(pipelineInfo,pipelineIdx);
 
-	AddVertexAttribute(pipelineInfo,VERTEX_ATTRIBUTE_POSITION);
-	AttachPushConstantRange(pipelineInfo,pipelineIdx,0,sizeof(Vector4),prosper::ShaderStageFlags::FragmentBit);
+	AddVertexAttribute(VERTEX_ATTRIBUTE_POSITION);
+	AttachPushConstantRange(0,sizeof(Vector4),prosper::ShaderStageFlags::FragmentBit);
 }
 
 bool ShaderClear::RecordDraw(ShaderBindState &bindState) const

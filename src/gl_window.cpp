@@ -100,7 +100,7 @@ void GLWindow::DoReleaseSwapchain()
 
 void GLWindow::InitCommandBuffers()
 {
-	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(*this, prosper::QueueFamilyType::Universal);
+	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(this->GetContext(), prosper::QueueFamilyType::Universal);
 	cmdBuffer->SetDebugName("swapchain_cmd" + std::to_string(0));
 	m_commandBuffers = {cmdBuffer, cmdBuffer};
 }
