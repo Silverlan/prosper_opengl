@@ -12,13 +12,15 @@
 #include <queue>
 #include <memory>
 #include <optional>
+#include <pragma/rendering/shaders/image/c_shader_clear_color.hpp>
+#include <pragma/rendering/shaders/image/c_shader_flip_image.hpp>
 
 class GLShaderProgram;
 namespace prosper
 {
-	class ShaderClear;
+	//class ShaderClear;
 	class ShaderBlit;
-	class ShaderFlipY;
+	//class ShaderFlipY;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
 
@@ -116,10 +118,11 @@ namespace prosper
 		virtual void DrawFrame(const std::function<void()> &drawFrame) override;
 		virtual bool Submit(ICommandBuffer &cmdBuf,bool shouldBlock=false,IFence *optFence=nullptr) override;
 		virtual void Initialize(const CreateInfo &createInfo) override;
-		ShaderClear *GetClearShader() const;
+		
+		pragma::ShaderClearColor *GetClearShader() const;
 		ShaderBlit *GetBlitShader() const;
-		ShaderFlipY *GetFlipYShader() const;
-
+		pragma::ShaderFlipImage *GetFlipYShader() const;
+		
 		virtual std::shared_ptr<IEvent> CreateEvent() override;
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled=false) override;
 		virtual std::shared_ptr<ISampler> CreateSampler(const util::SamplerCreateInfo &createInfo) override;

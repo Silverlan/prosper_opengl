@@ -21,9 +21,9 @@
 #include "gl_command_buffer.hpp"
 #include "gl_window.hpp"
 #include "shader/prosper_shader.hpp"
-#include "shader/gl_shader_clear.hpp"
+//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-#include "shader/gl_shader_flip_y.hpp"
+//#include "shader/gl_shader_flip_y.hpp"
 #include <prosper_swap_command_buffer.hpp>
 #include <shader/prosper_pipeline_create_info.hpp>
 #include <prosper_glsl.hpp>
@@ -765,6 +765,7 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf,bool shouldBlock,IFence *
 void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
 	IPrContext::Initialize(createInfo);
+	/*
 	m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
 	m_hShaderClear = m_shaderManager->GetShader("clear_image");
 
@@ -773,10 +774,15 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 
 	m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
 	m_hShaderFlipY = m_shaderManager->GetShader("flip_y");
+	*/
+	m_hShaderClear = m_shaderManager->GetShader("clear_color");
+	m_hShaderFlipY = m_shaderManager->GetShader("flip_image");
 }
-prosper::ShaderClear *prosper::GLContext::GetClearShader() const {return static_cast<prosper::ShaderClear*>(m_hShaderClear.get());}
+
+pragma::ShaderClearColor *prosper::GLContext::GetClearShader() const { return static_cast<pragma::ShaderClearColor *>(m_hShaderClear.get()); }
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
-prosper::ShaderFlipY *prosper::GLContext::GetFlipYShader() const {return static_cast<prosper::ShaderFlipY*>(m_hShaderFlipY.get());}
+pragma::ShaderFlipImage *prosper::GLContext::GetFlipYShader() const { return static_cast<pragma::ShaderFlipImage *>(m_hShaderFlipY.get()); }
+
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle() {glFinish();}

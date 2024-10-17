@@ -11,9 +11,9 @@
 #include "buffers/gl_buffer.hpp"
 #include "buffers/gl_render_buffer.hpp"
 #include "shader/prosper_shader.hpp"
-#include "shader/gl_shader_clear.hpp"
+//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-#include "shader/gl_shader_flip_y.hpp"
+//#include "shader/gl_shader_flip_y.hpp"
 #include "gl_render_pass.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
@@ -723,7 +723,7 @@ bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,IImage &swapchainI
 	if(shaderFlipY->RecordBeginDraw(bindState))
 	{
 		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());
-		shaderFlipY->RecordDraw(bindState);
+		shaderFlipY->RecordDraw(bindState,);
 		shaderFlipY->RecordEndDraw(bindState);
 	}
 
