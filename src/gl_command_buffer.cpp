@@ -723,7 +723,7 @@ bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,IImage &swapchainI
 	if(shaderFlipY->RecordBeginDraw(bindState))
 	{
 		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());
-		shaderFlipY->RecordDraw(bindState,);
+		shaderFlipY->RecordDraw(bindState);
 		shaderFlipY->RecordEndDraw(bindState);
 	}
 
