@@ -710,8 +710,8 @@ bool prosper::GLCommandBuffer::ResetQuery(const Query &query) const
 bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img, IImage &swapchainImg, IFramebuffer &swapchainFramebuffer)
 {
   glBlitNamedFramebuffer(
-    static_cast<GLImage&>(img).GetOrCreateFramebuffer(0,1,0,1),
-    swapchainFramebuffer,
+    static_cast<GLImage&>(img).GetOrCreateFramebuffer(0,1,0,1)->GetGLFramebuffer(),
+    static_cast<GLFramebuffer&>(swapchainFramebuffer).GetGLFramebuffer(),
     0,0,img.GetWidth(),img.GetHeight(),
     0,0,swapchainImg.GetWidth(),swapchainImg.GetHeight(),
     GL_COLOR_BUFFER_BIT,
