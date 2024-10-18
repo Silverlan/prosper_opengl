@@ -148,13 +148,19 @@ bool prosper::GLCommandBuffer::RecordDrawIndexed(uint32_t indexCount, uint32_t i
 }
 bool prosper::GLCommandBuffer::RecordDrawIndexedIndirect(IBuffer &buf, DeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
-
-	return false; // TODO
+	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, buf.GetAPITypeRef<GLBuffer>().GetGLBuffer());
+	for(uint32_t i = 0; i < drawCount; ++i)
+		glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, reinterpret_cast<void *>(offset + i * stride));
+	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+	return true;
 }
 bool prosper::GLCommandBuffer::RecordDrawIndirect(IBuffer &buf, DeviceSize offset, uint32_t count, uint32_t stride)
 {
-
-	return false; // TODO
+	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, buf.GetAPITypeRef<GLBuffer>().GetGLBuffer());
+	for(uint32_t i = 0; i < count; ++i)
+		glDrawArraysIndirect(GL_TRIANGLES, reinterpret_cast<void *>(offset + i * stride));
+	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+	return true;
 }
 bool prosper::GLCommandBuffer::RecordFillBuffer(IBuffer &buf, DeviceSize offset, DeviceSize size, uint32_t value)
 {
@@ -169,23 +175,48 @@ bool prosper::GLCommandBuffer::RecordFillBuffer(IBuffer &buf, DeviceSize offset,
 
 bool prosper::GLCommandBuffer::RecordSetBlendConstants(const std::array<float, 4> &blendConstants)
 {
-
-	return false; // TODO
+	glBlendColor(blendConstants[0], blendConstants[1], blendConstants[2], blendConstants[3]);
+	return true;
 }
 bool prosper::GLCommandBuffer::RecordSetDepthBounds(float minDepthBounds, float maxDepthBounds)
 {
-
-	return false; // TODO
+	// Note: This is not equivalent to Vulkan
+	glDepthRange(minDepthBounds, maxDepthBounds);
+	return true;
 }
 
 bool prosper::GLCommandBuffer::RecordSetStencilCompareMask(StencilFaceFlags faceMask, uint32_t stencilCompareMask)
 {
-	return false; // TODO
+	GLint func, ref;
+
+	if(umath::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
+		glGetIntegerv(GL_STENCIL_FUNC, &func);
+		glGetIntegerv(GL_STENCIL_REF, &ref);
+		glStencilFuncSeparate(GL_FRONT, func, ref, stencilCompareMask);
+	}
+
+	if(umath::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
+		glGetIntegerv(GL_STENCIL_BACK_FUNC, &func);
+		glGetIntegerv(GL_STENCIL_BACK_REF, &ref);
+		glStencilFuncSeparate(GL_BACK, func, ref, stencilCompareMask);
+	}
+	return true;
 }
 bool prosper::GLCommandBuffer::RecordSetStencilReference(StencilFaceFlags faceMask, uint32_t stencilReference)
 {
+	GLint func, mask;
+	if(umath::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
+		glGetIntegerv(GL_STENCIL_FUNC, &func);
+		glGetIntegerv(GL_STENCIL_VALUE_MASK, &mask);
+		glStencilFuncSeparate(GL_FRONT, func, stencilReference, mask);
+	}
 
-	return false; // TODO
+	if(umath::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
+		glGetIntegerv(GL_STENCIL_BACK_FUNC, &func);
+		glGetIntegerv(GL_STENCIL_BACK_VALUE_MASK, &mask);
+		glStencilFuncSeparate(GL_BACK, func, stencilReference, mask);
+	}
+	return true;
 }
 bool prosper::GLCommandBuffer::RecordSetStencilWriteMask(StencilFaceFlags faceMask, uint32_t stencilWriteMask)
 {
@@ -196,7 +227,10 @@ bool prosper::GLCommandBuffer::RecordSetStencilWriteMask(StencilFaceFlags faceMa
 
 bool prosper::GLCommandBuffer::RecordPipelineBarrier(const prosper::util::PipelineBarrierInfo &barrierInfo)
 {
-	return true; // TODO
+	// OpenGL does not require explicit pipeline barriers in the same way Vulkan does.
+	// Insert appropriate glMemoryBarrier calls or no-op if synchronization is handled elsewhere.
+	// glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	return true;
 }
 
 bool prosper::GLCommandBuffer::RecordSetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
