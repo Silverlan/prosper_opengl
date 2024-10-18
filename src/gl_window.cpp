@@ -13,12 +13,12 @@
 
 using namespace prosper;
 
-std::shared_ptr<GLWindow> GLWindow::Create(const WindowSettings &windowCreationInfo,prosper::IPrContext &context)
+std::shared_ptr<GLWindow> GLWindow::Create(const WindowSettings &windowCreationInfo, prosper::IPrContext &context)
 {
-	auto window = std::shared_ptr<GLWindow>{new GLWindow{context,windowCreationInfo},[](GLWindow *window) {
-		window->Release();
-		delete window;
-	}};
+	auto window = std::shared_ptr<GLWindow> {new GLWindow {context, windowCreationInfo}, [](GLWindow *window) {
+		                                         window->Release();
+		                                         delete window;
+	                                         }};
 	window->InitWindow();
 	return window;
 }
@@ -41,9 +41,8 @@ void GLWindow::InitWindow()
 
 	const char *errDesc;
 	auto err = glfwGetError(&errDesc);
-	if(err != GLFW_NO_ERROR)
-	{
-		std::cout<<"Error retrieving GLFW window handle: "<<errDesc<<std::endl;
+	if(err != GLFW_NO_ERROR) {
+		std::cout << "Error retrieving GLFW window handle: " << errDesc << std::endl;
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		exit(EXIT_FAILURE);
 	}
@@ -54,10 +53,10 @@ void GLWindow::InitWindow()
 	m_settings.width = actualWindowSize.x;
 	m_settings.height = actualWindowSize.y;
 
-	m_glfwWindow->SetResizeCallback([](GLFW::Window &window,Vector2i size) {
-		std::cout<<"Resizing..."<<std::endl; // TODO
+	m_glfwWindow->SetResizeCallback([](GLFW::Window &window, Vector2i size) {
+		std::cout << "Resizing..." << std::endl; // TODO
 	});
-	glfwMakeContextCurrent(const_cast<GLFWwindow*>(m_glfwWindow->GetGLFWWindow()));
+	glfwMakeContextCurrent(const_cast<GLFWwindow *>(m_glfwWindow->GetGLFWWindow()));
 
 	OnWindowInitialized();
 }
@@ -79,8 +78,8 @@ void GLWindow::DoInitSwapchain()
 	imgCreateInfo.tiling = prosper::ImageTiling::Optimal;
 	imgCreateInfo.usage = prosper::ImageUsageFlags::TransferDstBit;
 	imgCreateInfo.flags = util::ImageCreateInfo::Flags::DontAllocateMemory;
-	auto img = std::shared_ptr<GLImage>{new GLImage{GetContext(),imgCreateInfo,0,GL_RGBA}};
-	m_swapchainImages = {img,img};
+	auto img = std::shared_ptr<GLImage> {new GLImage {GetContext(), imgCreateInfo, 0, GL_RGBA}};
+	m_swapchainImages = {img, img};
 
 	prosper::util::ImageViewCreateInfo imgViewCreateInfo {};
 	imgViewCreateInfo.baseLayer = 0;
@@ -88,9 +87,9 @@ void GLWindow::DoInitSwapchain()
 	imgViewCreateInfo.mipmapLevels = 1;
 	imgViewCreateInfo.levelCount = 1;
 	imgViewCreateInfo.format = prosper::Format::R8G8B8A8_UNorm;
-	auto imgView = GLImageView::Create(GetContext(),*img,imgViewCreateInfo,prosper::ImageViewType::e2D,prosper::ImageAspectFlags::ColorBit);
-	auto framebuffer = std::shared_ptr<GLFramebuffer>{new GLFramebuffer{GetContext(),{imgView},imgCreateInfo.width,imgCreateInfo.height,1,1,0}};
-	m_swapchainFramebuffers = {framebuffer,framebuffer};
+	auto imgView = GLImageView::Create(GetContext(), *img, imgViewCreateInfo, prosper::ImageViewType::e2D, prosper::ImageAspectFlags::ColorBit);
+	auto framebuffer = std::shared_ptr<GLFramebuffer> {new GLFramebuffer {GetContext(), {imgView}, imgCreateInfo.width, imgCreateInfo.height, 1, 1, 0}};
+	m_swapchainFramebuffers = {framebuffer, framebuffer};
 }
 void GLWindow::DoReleaseSwapchain()
 {

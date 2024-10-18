@@ -9,17 +9,14 @@
 #include <prosper_includes.hpp>
 #include <prosper_render_pass.hpp>
 
-namespace prosper
-{
-	class DLLPROSPER_GL GLRenderPass
-		: public prosper::IRenderPass
-	{
-	public:
-		static std::shared_ptr<IRenderPass> Create(IPrContext &context,const util::RenderPassCreateInfo &createInfo);
+namespace prosper {
+	class DLLPROSPER_GL GLRenderPass : public prosper::IRenderPass {
+	  public:
+		static std::shared_ptr<IRenderPass> Create(IPrContext &context, const util::RenderPassCreateInfo &createInfo);
 
 		virtual ~GLRenderPass() override;
-	private:
-		GLRenderPass(IPrContext &context,const util::RenderPassCreateInfo &createInfo);
+	  private:
+		GLRenderPass(IPrContext &context, const util::RenderPassCreateInfo &createInfo);
 	};
 };
 

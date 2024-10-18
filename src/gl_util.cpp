@@ -12,8 +12,7 @@ using namespace prosper;
 GLuint prosper::util::to_opengl_enum(prosper::Filter filter)
 {
 	auto glFilter = GL_LINEAR;
-	switch(filter)
-	{
+	switch(filter) {
 	case prosper::Filter::Linear:
 		glFilter = GL_LINEAR;
 		break;
@@ -26,8 +25,7 @@ GLuint prosper::util::to_opengl_enum(prosper::Filter filter)
 
 GLuint prosper::util::to_opengl_enum(prosper::SamplerAddressMode addressMode)
 {
-	switch(addressMode)
-	{
+	switch(addressMode) {
 	case SamplerAddressMode::Repeat:
 		return GL_REPEAT;
 	case SamplerAddressMode::MirroredRepeat:
@@ -44,8 +42,7 @@ GLuint prosper::util::to_opengl_enum(prosper::SamplerAddressMode addressMode)
 
 GLuint prosper::util::to_opengl_enum(prosper::CompareOp compareOp)
 {
-	switch(compareOp)
-	{
+	switch(compareOp) {
 	case CompareOp::Never:
 		return GL_NEVER;
 	case CompareOp::Less:
@@ -68,8 +65,7 @@ GLuint prosper::util::to_opengl_enum(prosper::CompareOp compareOp)
 
 GLenum prosper::util::to_opengl_enum(prosper::PrimitiveTopology primitiveTopology)
 {
-	switch(primitiveTopology)
-	{
+	switch(primitiveTopology) {
 	case prosper::PrimitiveTopology::PointList:
 		return GL_POINTS;
 	case prosper::PrimitiveTopology::LineList:
@@ -98,8 +94,7 @@ GLenum prosper::util::to_opengl_enum(prosper::PrimitiveTopology primitiveTopolog
 
 GLenum prosper::util::to_opengl_enum(prosper::BlendOp blendOp)
 {
-	switch(blendOp)
-	{
+	switch(blendOp) {
 	case BlendOp::Add:
 		return GL_FUNC_ADD;
 	case BlendOp::Subtract:
@@ -117,8 +112,7 @@ GLenum prosper::util::to_opengl_enum(prosper::BlendOp blendOp)
 
 GLenum prosper::util::to_opengl_enum(prosper::BlendFactor blendFactor)
 {
-	switch(blendFactor)
-	{
+	switch(blendFactor) {
 	case BlendFactor::Zero:
 		return GL_ZERO;
 	case BlendFactor::One:
@@ -164,22 +158,20 @@ GLenum prosper::util::to_opengl_enum(prosper::BlendFactor blendFactor)
 
 GLenum prosper::util::to_opengl_enum(prosper::IndexType indexType)
 {
-	switch(indexType)
-	{
+	switch(indexType) {
 	case IndexType::UInt16:
 		return GL_UNSIGNED_SHORT;
 	case IndexType::UInt32:
-		return  GL_UNSIGNED_INT;
+		return GL_UNSIGNED_INT;
 	}
 	assert(false);
 	return 0;
 }
 
-GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboolean &outNormalized)
+GLenum prosper::util::to_opengl_image_format_type(prosper::Format format, GLboolean &outNormalized)
 {
 	outNormalized = GL_FALSE;
-	switch(format)
-	{
+	switch(format) {
 	case prosper::Format::A8B8G8R8_UNorm_Pack32:
 		outNormalized = GL_TRUE;
 		return GL_UNSIGNED_INT_8_8_8_8_REV;
@@ -255,13 +247,12 @@ GLenum prosper::util::to_opengl_image_format_type(prosper::Format format,GLboole
 	case prosper::Format::R64G64B64A64_SFloat_PoorCoverage:
 		return GL_DOUBLE;
 	}
-	throw std::logic_error{"Unsupported format!"};
+	throw std::logic_error {"Unsupported format!"};
 }
 
-GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optOutPixelDataFormat)
+GLenum prosper::util::to_opengl_image_format(prosper::Format format, GLenum *optOutPixelDataFormat)
 {
-	switch(format)
-	{
+	switch(format) {
 	case prosper::Format::R8_UNorm:
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RED;
@@ -301,7 +292,8 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 	case prosper::Format::R16_SNorm:
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RED;
-		return GL_R16_SNORM;;
+		return GL_R16_SNORM;
+		;
 	case prosper::Format::R16G16_UNorm:
 		if(optOutPixelDataFormat)
 			*optOutPixelDataFormat = GL_RG;
@@ -584,7 +576,7 @@ GLenum prosper::util::to_opengl_image_format(prosper::Format format,GLenum *optO
 			*optOutPixelDataFormat = GL_RGB;
 		return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
 	}
-	throw std::logic_error{"Unsupported format!"};
+	throw std::logic_error {"Unsupported format!"};
 	// TODO: Add ALL supported formats!
 #if 0
 	enum class Format : uint32_t

@@ -10,17 +10,11 @@
 #include "gl_buffer.hpp"
 #include "buffers/prosper_dynamic_resizable_buffer.hpp"
 
-namespace prosper
-{
-	class DLLPROSPER_GL GLDynamicResizableBuffer
-		: public IDynamicResizableBuffer,
-		virtual public GLBuffer
-	{
-	public:
-		GLDynamicResizableBuffer(
-			IPrContext &context,IBuffer &buffer,const util::BufferCreateInfo &createInfo,uint64_t maxTotalSize
-		);
-	protected:
+namespace prosper {
+	class DLLPROSPER_GL GLDynamicResizableBuffer : public IDynamicResizableBuffer, virtual public GLBuffer {
+	  public:
+		GLDynamicResizableBuffer(IPrContext &context, IBuffer &buffer, const util::BufferCreateInfo &createInfo, uint64_t maxTotalSize);
+	  protected:
 		virtual void MoveInternalBuffer(IBuffer &other) override;
 	};
 };

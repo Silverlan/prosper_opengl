@@ -9,17 +9,14 @@
 #include <prosper_includes.hpp>
 #include <prosper_event.hpp>
 
-namespace prosper
-{
-	class DLLPROSPER_GL GLEvent
-		: public prosper::IEvent
-	{
-	public:
+namespace prosper {
+	class DLLPROSPER_GL GLEvent : public prosper::IEvent {
+	  public:
 		static std::shared_ptr<IEvent> Create(IPrContext &context);
 
 		virtual ~GLEvent() override;
 		virtual bool IsSet() const override;
-	private:
+	  private:
 		GLEvent(IPrContext &context);
 	};
 };

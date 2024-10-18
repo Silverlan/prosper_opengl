@@ -9,21 +9,14 @@
 #include <prosper_includes.hpp>
 #include <image/prosper_image_view.hpp>
 
-namespace prosper
-{
-	class DLLPROSPER_GL GLImageView
-		: public prosper::IImageView
-	{
-	public:
-		static std::shared_ptr<IImageView> Create(
-			IPrContext &context,IImage &img,const util::ImageViewCreateInfo &createInfo,ImageViewType type,ImageAspectFlags aspectFlags
-		);
+namespace prosper {
+	class DLLPROSPER_GL GLImageView : public prosper::IImageView {
+	  public:
+		static std::shared_ptr<IImageView> Create(IPrContext &context, IImage &img, const util::ImageViewCreateInfo &createInfo, ImageViewType type, ImageAspectFlags aspectFlags);
 
 		virtual ~GLImageView() override;
-	private:
-		GLImageView(
-			IPrContext &context,IImage &img,const util::ImageViewCreateInfo &createInfo,ImageViewType type,ImageAspectFlags aspectFlags
-		);
+	  private:
+		GLImageView(IPrContext &context, IImage &img, const util::ImageViewCreateInfo &createInfo, ImageViewType type, ImageAspectFlags aspectFlags);
 	};
 };
 

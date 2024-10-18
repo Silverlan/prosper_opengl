@@ -7,13 +7,8 @@
 
 using namespace prosper;
 
-ShaderBlit::ShaderBlit(prosper::IPrContext &context,const std::string &identifier)
-	: ShaderBaseImageProcessing(context,identifier,"screen/vs_screen_uv","screen/fs_blit")
-{}
+ShaderBlit::ShaderBlit(prosper::IPrContext &context, const std::string &identifier) : ShaderBaseImageProcessing(context, identifier, "screen/vs_screen_uv", "screen/fs_blit") {}
 
-void ShaderBlit::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipelineInfo,uint32_t pipelineIdx)
-{
-	ShaderBaseImageProcessing::InitializeGfxPipeline(pipelineInfo,pipelineIdx);
-}
+void ShaderBlit::InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipelineInfo, uint32_t pipelineIdx) { ShaderBaseImageProcessing::InitializeGfxPipeline(pipelineInfo, pipelineIdx); }
 
-bool ShaderBlit::RecordDraw(ShaderBindState &bindState,prosper::IDescriptorSet &descSetTexture) const {return ShaderBaseImageProcessing::RecordDraw(bindState,descSetTexture);}
+bool ShaderBlit::RecordDraw(ShaderBindState &bindState, prosper::IDescriptorSet &descSetTexture) const { return ShaderBaseImageProcessing::RecordDraw(bindState, descSetTexture); }

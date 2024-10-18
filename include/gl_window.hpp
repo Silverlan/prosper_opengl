@@ -9,19 +9,16 @@
 #include <prosper_includes.hpp>
 #include <prosper_window.hpp>
 
-namespace prosper
-{
+namespace prosper {
 	class GLContext;
 	class GLImage;
 	class GLFramebuffer;
-	class DLLPROSPER_GL GLWindow
-		: public Window
-	{
-	public:
-		static std::shared_ptr<GLWindow> Create(const WindowSettings &windowCreationInfo,prosper::IPrContext &context);
+	class DLLPROSPER_GL GLWindow : public Window {
+	  public:
+		static std::shared_ptr<GLWindow> Create(const WindowSettings &windowCreationInfo, prosper::IPrContext &context);
 		virtual ~GLWindow() override {}
-		virtual uint32_t GetLastAcquiredSwapchainImageIndex() const override {return m_lastAcquiredSwapchainImageIndex;}
-	protected:
+		virtual uint32_t GetLastAcquiredSwapchainImageIndex() const override { return m_lastAcquiredSwapchainImageIndex; }
+	  protected:
 		friend GLContext;
 		using Window::Window;
 		virtual void InitWindow() override;

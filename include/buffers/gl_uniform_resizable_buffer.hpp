@@ -10,19 +10,11 @@
 #include "gl_buffer.hpp"
 #include "buffers/prosper_uniform_resizable_buffer.hpp"
 
-namespace prosper
-{
-	class DLLPROSPER_GL GLUniformResizableBuffer
-		: public IUniformResizableBuffer,
-		virtual public GLBuffer
-	{
-	public:
-		GLUniformResizableBuffer(
-			IPrContext &context,IBuffer &buffer,
-			uint64_t bufferInstanceSize,
-			uint64_t alignedBufferBaseSize,uint64_t maxTotalSize,uint32_t alignment
-		);
-	protected:
+namespace prosper {
+	class DLLPROSPER_GL GLUniformResizableBuffer : public IUniformResizableBuffer, virtual public GLBuffer {
+	  public:
+		GLUniformResizableBuffer(IPrContext &context, IBuffer &buffer, uint64_t bufferInstanceSize, uint64_t alignedBufferBaseSize, uint64_t maxTotalSize, uint32_t alignment);
+	  protected:
 		virtual void MoveInternalBuffer(IBuffer &other) override;
 	};
 };

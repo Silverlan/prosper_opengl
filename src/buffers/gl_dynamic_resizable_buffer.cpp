@@ -9,12 +9,8 @@
 
 using namespace prosper;
 
-prosper::GLDynamicResizableBuffer::GLDynamicResizableBuffer(
-	IPrContext &context,IBuffer &buffer,const util::BufferCreateInfo &createInfo,uint64_t maxTotalSize
-)
-	: IDynamicResizableBuffer{context,buffer,createInfo,maxTotalSize},
-	IBuffer{buffer.GetContext(),buffer.GetCreateInfo(),buffer.GetStartOffset(),buffer.GetSize()},
-	GLBuffer{buffer.GetContext(),buffer.GetCreateInfo(),buffer.GetStartOffset(),buffer.GetSize(),0}
+prosper::GLDynamicResizableBuffer::GLDynamicResizableBuffer(IPrContext &context, IBuffer &buffer, const util::BufferCreateInfo &createInfo, uint64_t maxTotalSize)
+    : IDynamicResizableBuffer {context, buffer, createInfo, maxTotalSize}, IBuffer {buffer.GetContext(), buffer.GetCreateInfo(), buffer.GetStartOffset(), buffer.GetSize()}, GLBuffer {buffer.GetContext(), buffer.GetCreateInfo(), buffer.GetStartOffset(), buffer.GetSize(), 0}
 {
 	GLBuffer::m_buffer = buffer.GetAPITypeRef<GLBuffer>().m_buffer;
 	buffer.GetAPITypeRef<GLBuffer>().m_buffer = 0; // Setting to 0 to ensure it won't get deleted

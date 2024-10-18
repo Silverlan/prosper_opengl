@@ -6,13 +6,8 @@
 
 using namespace prosper;
 
-std::shared_ptr<IRenderPass> GLRenderPass::Create(IPrContext &context,const prosper::util::RenderPassCreateInfo &createInfo)
-{
-	return std::shared_ptr<GLRenderPass>{new GLRenderPass{context,createInfo}};
-}
+std::shared_ptr<IRenderPass> GLRenderPass::Create(IPrContext &context, const prosper::util::RenderPassCreateInfo &createInfo) { return std::shared_ptr<GLRenderPass> {new GLRenderPass {context, createInfo}}; }
 
 GLRenderPass::~GLRenderPass() {}
 
-GLRenderPass::GLRenderPass(IPrContext &context,const prosper::util::RenderPassCreateInfo &createInfo)
-	: IRenderPass{context,createInfo}
-{}
+GLRenderPass::GLRenderPass(IPrContext &context, const prosper::util::RenderPassCreateInfo &createInfo) : IRenderPass {context, createInfo} {}

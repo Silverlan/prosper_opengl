@@ -30,6 +30,6 @@ using GLenum = unsigned int;
 using GLboolean = unsigned char;
 #define GL_INVALID_VALUE 0x0501
 struct __GLsync;
-using GLsync = __GLsync*;
+using GLsync = __GLsync *;
 
 #endif

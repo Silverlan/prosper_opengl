@@ -10,34 +10,29 @@
 
 using namespace prosper;
 
-std::shared_ptr<IFramebuffer> GLFramebuffer::Create(
-	IPrContext &context,const std::vector<std::shared_ptr<IImageView>> &attachments,
-	uint32_t width,uint32_t height,uint32_t depth,uint32_t layers
-)
+std::shared_ptr<IFramebuffer> GLFramebuffer::Create(IPrContext &context, const std::vector<std::shared_ptr<IImageView>> &attachments, uint32_t width, uint32_t height, uint32_t depth, uint32_t layers)
 {
 	GLuint framebuffer;
-	glCreateFramebuffers(1,&framebuffer);
+	glCreateFramebuffers(1, &framebuffer);
 	uint32_t attId = 0;
 	std::vector<GLenum> bufferTargets {};
 	bufferTargets.reserve(attachments.size());
-	for(auto &att : attachments)
-	{
+	for(auto &att : attachments) {
 		auto mipmapLevel = att->GetBaseMipmapLevel();
 		auto aspectMask = att->GetAspectMask();
 		auto baseLayer = att->GetBaseLayer();
 		auto numLayers = att->GetLayerCount();
-		auto &img = static_cast<GLImage&>(att->GetImage());
+		auto &img = static_cast<GLImage &>(att->GetImage());
 		auto type = img.GetImageType();
 		auto texId = img.GetGLImage();
 		GLenum attachment;
-		switch(aspectMask)
-		{
+		switch(aspectMask) {
 		case prosper::ImageAspectFlags::DepthBit:
 			attachment = GL_DEPTH_ATTACHMENT;
 			bufferTargets.push_back(GL_NONE);
 			break;
 		case prosper::ImageAspectFlags::ColorBit:
-			attachment = GL_COLOR_ATTACHMENT0 +attId;
+			attachment = GL_COLOR_ATTACHMENT0 + attId;
 			bufferTargets.push_back(attachment);
 			break;
 		default:
@@ -45,32 +40,30 @@ std::shared_ptr<IFramebuffer> GLFramebuffer::Create(
 			continue; // Should be unreachable
 		}
 		if(baseLayer == 0)
-			glNamedFramebufferTexture(framebuffer,attachment,texId,mipmapLevel);
+			glNamedFramebufferTexture(framebuffer, attachment, texId, mipmapLevel);
 		else
-			glNamedFramebufferTextureLayer(framebuffer,attachment,texId,mipmapLevel,baseLayer);
+			glNamedFramebufferTextureLayer(framebuffer, attachment, texId, mipmapLevel, baseLayer);
 		++attId;
 	}
-	glNamedFramebufferDrawBuffers(framebuffer,bufferTargets.size(),bufferTargets.data());
+	glNamedFramebufferDrawBuffers(framebuffer, bufferTargets.size(), bufferTargets.data());
 
-	static_cast<GLContext&>(context).CheckResult();
-	return std::shared_ptr<GLFramebuffer>{new GLFramebuffer{context,attachments,width,height,depth,layers,framebuffer}};
+	static_cast<GLContext &>(context).CheckResult();
+	return std::shared_ptr<GLFramebuffer> {new GLFramebuffer {context, attachments, width, height, depth, layers, framebuffer}};
 }
 
-GLFramebuffer::GLFramebuffer(
-	IPrContext &context,const std::vector<std::shared_ptr<IImageView>> &attachments,
-	uint32_t width,uint32_t height,uint32_t depth,uint32_t layers,GLuint framebuffer
-)
-	: IFramebuffer{context,attachments,width,height,depth,layers},m_framebuffer{framebuffer}
-{}
+GLFramebuffer::GLFramebuffer(IPrContext &context, const std::vector<std::shared_ptr<IImageView>> &attachments, uint32_t width, uint32_t height, uint32_t depth, uint32_t layers, GLuint framebuffer)
+    : IFramebuffer {context, attachments, width, height, depth, layers}, m_framebuffer {framebuffer}
+{
+}
 
 GLFramebuffer::~GLFramebuffer()
 {
 	if(m_framebuffer != 0)
-		glDeleteFramebuffers(1,&m_framebuffer);
+		glDeleteFramebuffers(1, &m_framebuffer);
 }
-void GLFramebuffer::UpateSize(uint32_t w,uint32_t h)
+void GLFramebuffer::UpateSize(uint32_t w, uint32_t h)
 {
 	m_width = w;
 	m_height = h;
 }
-const void *GLFramebuffer::GetInternalHandle() const {return reinterpret_cast<void*>(m_framebuffer);}
+const void *GLFramebuffer::GetInternalHandle() const { return reinterpret_cast<void *>(m_framebuffer); }

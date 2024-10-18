@@ -6,15 +6,10 @@
 
 using namespace prosper;
 
-std::shared_ptr<IEvent> GLEvent::Create(IPrContext &context)
-{
-	return std::shared_ptr<GLEvent>{new GLEvent{context}};
-}
+std::shared_ptr<IEvent> GLEvent::Create(IPrContext &context) { return std::shared_ptr<GLEvent> {new GLEvent {context}}; }
 
 GLEvent::~GLEvent() {}
-GLEvent::GLEvent(IPrContext &context)
-	: IEvent{context}
-{}
+GLEvent::GLEvent(IPrContext &context) : IEvent {context} {}
 bool GLEvent::IsSet() const
 {
 	// TODO

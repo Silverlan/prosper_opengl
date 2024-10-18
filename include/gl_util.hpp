@@ -9,10 +9,8 @@
 #include <prosper_enums.hpp>
 
 typedef unsigned int GLenum;
-namespace prosper
-{
-	namespace util
-	{
+namespace prosper {
+	namespace util {
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::Filter filter);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::SamplerAddressMode addressMode);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::CompareOp compareOp);
@@ -20,8 +18,8 @@ namespace prosper
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendOp blendOp);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::BlendFactor blendFactor);
 		DLLPROSPER_GL GLenum to_opengl_enum(prosper::IndexType indexType);
-		DLLPROSPER_GL GLenum to_opengl_image_format_type(prosper::Format format,GLboolean &outNormalized);
-		DLLPROSPER_GL GLenum to_opengl_image_format(prosper::Format format,GLenum *optOutPixelDataFormat=nullptr);
+		DLLPROSPER_GL GLenum to_opengl_image_format_type(prosper::Format format, GLboolean &outNormalized);
+		DLLPROSPER_GL GLenum to_opengl_image_format(prosper::Format format, GLenum *optOutPixelDataFormat = nullptr);
 	};
 };
 

@@ -9,20 +9,17 @@
 #include <shader/prosper_shader_base_image_processing.hpp>
 #include <mathutil/uvec.h>
 
-namespace prosper
-{
+namespace prosper {
 	class RenderTarget;
-	class DLLPROSPER_GL ShaderBlit
-		: public ShaderBaseImageProcessing
-	{
-	public:
-		ShaderBlit(prosper::IPrContext &context,const std::string &identifier);
-		bool RecordDraw(ShaderBindState &bindState,prosper::IDescriptorSet &descSetTexture) const;
+	class DLLPROSPER_GL ShaderBlit : public ShaderBaseImageProcessing {
+	  public:
+		ShaderBlit(prosper::IPrContext &context, const std::string &identifier);
+		bool RecordDraw(ShaderBindState &bindState, prosper::IDescriptorSet &descSetTexture) const;
 
 		// Expects the texture to already be bound
 		using ShaderBaseImageProcessing::RecordDraw;
-	protected:
-		virtual void InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipelineInfo,uint32_t pipelineIdx) override;
+	  protected:
+		virtual void InitializeGfxPipeline(prosper::GraphicsPipelineCreateInfo &pipelineInfo, uint32_t pipelineIdx) override;
 	};
 };
 
