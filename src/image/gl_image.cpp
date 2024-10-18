@@ -8,12 +8,14 @@
 #include "gl_context.hpp"
 #include "gl_api.hpp"
 #include "gl_util.hpp"
+#include <prosper_util.hpp>
 
 using namespace prosper;
 
 #if 0
 #include <gli/gli.hpp>
 #include <iostream>
+#include <prosper_util.hpp>
 static void test_cubemap()
 {
 	auto ddsTex = gli::load_dds("E:/projects/pragma/build_winx64/output/addons/converted/materials/skybox/sky_day01_08.dds");
@@ -278,7 +280,12 @@ bool GLImage::Unmap()
 	return false; // TODO
 }
 
-const void *GLImage::GetInternalHandle() const {return reinterpret_cast<void*>(m_image);}
+const void *GLImage::GetInternalHandle() const { return reinterpret_cast<void *>(m_image); }
+
+std::optional<size_t> prosper::GLImage::GetStorageSize() const  
+{
+		return {4};
+}
 
 bool GLImage::DoSetMemoryBuffer(IBuffer &buffer)
 {

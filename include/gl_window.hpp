@@ -28,6 +28,7 @@ namespace prosper
 		virtual void ReleaseWindow() override;
 		virtual void DoInitSwapchain() override;
 		virtual void DoReleaseSwapchain() override;
+		virtual void InitCommandBuffers() override;
 
 		uint32_t m_lastAcquiredSwapchainImageIndex = 0;
 	};

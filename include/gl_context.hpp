@@ -12,13 +12,15 @@
 #include <queue>
 #include <memory>
 #include <optional>
+#include <pragma/rendering/shaders/image/c_shader_clear_color.hpp>
+#include <pragma/rendering/shaders/image/c_shader_flip_image.hpp>
 
 class GLShaderProgram;
 namespace prosper
 {
-	class ShaderClear;
+	//class ShaderClear;
 	class ShaderBlit;
-	class ShaderFlipY;
+	//class ShaderFlipY;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
 
@@ -27,7 +29,6 @@ namespace prosper
 	{
 	public:
 		static std::shared_ptr<GLContext> Create(const std::string &appName,bool bEnableValidation);
-
 		bool CheckFramebufferStatus(IFramebuffer &fb) const;
 		virtual bool IsImageFormatSupported(
 			prosper::Format format,prosper::ImageUsageFlags usageFlags,prosper::ImageType type=prosper::ImageType::e2D,
@@ -48,7 +49,7 @@ namespace prosper
 		virtual void ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
 
-		bool BuildShader(prosper::ShaderStage stage,const std::string &glslCode);
+		//bool BuildShader(prosper::ShaderStage stage,const std::string &glslCode);
 		virtual bool IsPresentationModeSupported(prosper::PresentModeKHR presentMode) const override;
 		virtual Vendor GetPhysicalDeviceVendor() const override;
 		virtual MemoryRequirements GetMemoryRequirements(IImage &img) override;
@@ -80,10 +81,12 @@ namespace prosper
 			prosper::ShaderStage stage,
 			const std::string &entrypointName="main"
 		) override;
-		virtual std::shared_ptr<ShaderStageProgram> CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload=false) override;
+		virtual std::shared_ptr<ShaderStageProgram> CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload=false, const std::string &prefixCode = {},
+		  const std::unordered_map<std::string, std::string> &definitions = {}) override;
 		virtual bool GetParsedShaderSourceCode(prosper::Shader &shader,std::vector<std::string> &outGlslCodePerStage,std::vector<prosper::ShaderStage> &outGlslCodeStages,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const override;
-		std::optional<std::string> CompileShaders(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog) const;
-		virtual bool InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const override;
+		//std::optional<std::string> CompileShaders(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog) const;
+		virtual bool InitializeShaderSources(prosper::Shader &shader, bool bReload, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage, const std::string &prefixCode = {},
+		  const std::unordered_map<std::string, std::string> &definitions = {}) const override;
 		virtual std::optional<PipelineID> AddPipeline(
 			prosper::Shader &shader,PipelineID shaderPipelineId,const prosper::ComputePipelineCreateInfo &createInfo,
 			prosper::ShaderStageData &stage,PipelineID basePipelineId=std::numeric_limits<PipelineID>::max()
@@ -112,19 +115,20 @@ namespace prosper
 		virtual bool QueryResult(const Query &query,uint32_t &r) const override;
 		virtual bool QueryResult(const Query &query,uint64_t &r) const override;
 
-		virtual void DrawFrame(const std::function<void(const std::shared_ptr<prosper::IPrimaryCommandBuffer>&,uint32_t)> &drawFrame) override;
+		virtual void DrawFrame(const std::function<void()> &drawFrame) override;
 		virtual bool Submit(ICommandBuffer &cmdBuf,bool shouldBlock=false,IFence *optFence=nullptr) override;
 		virtual void Initialize(const CreateInfo &createInfo) override;
-		ShaderClear *GetClearShader() const;
+		
+		pragma::ShaderClearColor *GetClearShader() const;
 		ShaderBlit *GetBlitShader() const;
-		ShaderFlipY *GetFlipYShader() const;
-
+		pragma::ShaderFlipImage *GetFlipYShader() const;
+		
 		virtual std::shared_ptr<IEvent> CreateEvent() override;
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled=false) override;
 		virtual std::shared_ptr<ISampler> CreateSampler(const util::SamplerCreateInfo &createInfo) override;
 		virtual std::shared_ptr<IRenderPass> CreateRenderPass(const util::RenderPassCreateInfo &renderPassInfo) override;
 		virtual std::shared_ptr<IDescriptorSetGroup> CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) override;
-		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(Window &window,bool allowMt=true) override;
+		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(Window &window, bool allowMt = true, const std::string &debugName = {}) override;
 		virtual std::shared_ptr<IFramebuffer> CreateFramebuffer(uint32_t width,uint32_t height,uint32_t layers,const std::vector<prosper::IImageView*> &attachments) override;
 		virtual std::unique_ptr<IShaderPipelineLayout> GetShaderPipelineLayout(const Shader &shader,uint32_t pipelineIdx=0u) const override;
 		virtual std::shared_ptr<IRenderBuffer> CreateRenderBuffer(
@@ -139,7 +143,7 @@ namespace prosper
 		bool BindVertexBuffers(const prosper::GraphicsPipelineCreateInfo &pipelineCreateInfo,const std::vector<IBuffer*> &buffers,uint32_t startBinding,const std::vector<DeviceSize> &offsets,uint32_t *optOutAbsAttrId=nullptr);
 	protected:
 		GLContext(const std::string &appName,bool bEnableValidation=false);
-		void InitCommandBuffers();
+		//void InitCommandBuffers(); move to GLWindow
 		virtual std::shared_ptr<IUniformResizableBuffer> DoCreateUniformResizableBuffer(
 			const util::BufferCreateInfo &createInfo,uint64_t bufferInstanceSize,
 			uint64_t maxTotalSize,const void *data,

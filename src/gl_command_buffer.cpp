@@ -2,6 +2,7 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <prosper_util.hpp>
 #include "gl_command_buffer.hpp"
 #include "gl_context.hpp"
 #include "image/gl_image.hpp"
@@ -10,9 +11,9 @@
 #include "buffers/gl_buffer.hpp"
 #include "buffers/gl_render_buffer.hpp"
 #include "shader/prosper_shader.hpp"
-#include "shader/gl_shader_clear.hpp"
+//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-#include "shader/gl_shader_flip_y.hpp"
+//#include "shader/gl_shader_flip_y.hpp"
 #include "gl_render_pass.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
@@ -21,6 +22,7 @@
 #include "gl_api.hpp"
 #include "gl_util.hpp"
 #include <assert.h>
+#include <image/prosper_texture.hpp>
 
 static const auto SCISSOR_FLIP_Y = false;
 
@@ -705,29 +707,17 @@ bool prosper::GLCommandBuffer::ResetQuery(const Query &query) const
 	return false; // TODO
 }
 
-bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img,IImage &swapchainImg,IFramebuffer &swapchainFramebuffer)
+bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img, IImage &swapchainImg, IFramebuffer &swapchainFramebuffer)
 {
-	auto &context = GetContext();
-	auto *shaderFlipY = context.GetFlipYShader();
-	if(shaderFlipY == nullptr)
-		return false;
-
-	GLint drawFboId = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&drawFboId);
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0,&swapchainImg,&swapchainFramebuffer);
-	ShaderBindState bindState {*this};
-	if(shaderFlipY->RecordBeginDraw(bindState))
-	{
-		glBindTextureUnit(0,static_cast<GLImage&>(img).GetGLImage());
-		shaderFlipY->RecordDraw(bindState);
-		shaderFlipY->RecordEndDraw(bindState);
-	}
-
-	static_cast<GLPrimaryCommandBuffer*>(this)->SetActiveRenderPassTarget(nullptr,0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,drawFboId);
-	return true;
+  glBlitNamedFramebuffer(
+    static_cast<GLImage&>(img).GetOrCreateFramebuffer(0,1,0,1),
+    swapchainFramebuffer,
+    0,0,img.GetWidth(),img.GetHeight(),
+    0,0,swapchainImg.GetWidth(),swapchainImg.GetHeight(),
+    GL_COLOR_BUFFER_BIT,
+    GL_LINEAR
+  );
+  return true;
 }
 
 prosper::GLContext &prosper::GLCommandBuffer::GetContext() const {return static_cast<GLContext&>(ICommandBuffer::GetContext());}

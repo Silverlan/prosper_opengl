@@ -9,6 +9,7 @@
 #include "gl_framebuffer.hpp"
 #include "gl_api.hpp"
 #include <thread>
+#include "gl_command_buffer.hpp"
 
 using namespace prosper;
 
@@ -95,4 +96,11 @@ void GLWindow::DoReleaseSwapchain()
 {
 	m_swapchainImages.clear();
 	m_swapchainFramebuffers.clear();
+}
+
+void GLWindow::InitCommandBuffers()
+{
+	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(this->GetContext(), prosper::QueueFamilyType::Universal);
+	cmdBuffer->SetDebugName("swapchain_cmd" + std::to_string(0));
+	m_commandBuffers = {cmdBuffer, cmdBuffer};
 }

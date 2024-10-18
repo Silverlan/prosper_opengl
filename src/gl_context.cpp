@@ -21,9 +21,9 @@
 #include "gl_command_buffer.hpp"
 #include "gl_window.hpp"
 #include "shader/prosper_shader.hpp"
-#include "shader/gl_shader_clear.hpp"
+//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-#include "shader/gl_shader_flip_y.hpp"
+//#include "shader/gl_shader_flip_y.hpp"
 #include <prosper_swap_command_buffer.hpp>
 #include <shader/prosper_pipeline_create_info.hpp>
 #include <prosper_glsl.hpp>
@@ -347,12 +347,15 @@ prosper::IFramebuffer *prosper::GLContext::GetSwapchainFramebuffer(uint32_t idx)
 	return (idx < m_swapchainFramebuffers.size()) ? m_swapchainFramebuffers.at(idx).get() : nullptr;
 }
 
-void prosper::GLContext::InitCommandBuffers()
+/*
+//move to GLWindow
+void prosper::GLWindow::InitCommandBuffers()
 {
 	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(*this,prosper::QueueFamilyType::Universal);
 	cmdBuffer->SetDebugName("swapchain_cmd" +std::to_string(0));
 	m_commandBuffers = {cmdBuffer,cmdBuffer};
 }
+*/
 
 bool prosper::GLContext::IsPresentationModeSupported(prosper::PresentModeKHR presentMode) const
 {
@@ -368,8 +371,9 @@ std::unique_ptr<prosper::ShaderModule> prosper::GLContext::CreateShaderModuleFro
 {
 	return nullptr;
 }
-std::shared_ptr<prosper::ShaderStageProgram> prosper::GLContext::CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload)
-{
+std::shared_ptr<prosper::ShaderStageProgram> prosper::GLContext::CompileShader(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog,bool reload, const std::string &prefixCode,
+		  const std::unordered_map<std::string, std::string> &definitions)
+	{
 	auto shaderCode = prosper::glsl::load_glsl(*this,stage,shaderPath,&outInfoLog,&outDebugInfoLog);
 	if(shaderCode.has_value() == false)
 		return nullptr;
@@ -413,7 +417,7 @@ bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader,std::
 	}
 	return util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage,outInfoLog);
 }
-bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader,bool bReload,std::string &outInfoLog,std::string &outDebugInfoLog,prosper::ShaderStage &outErrStage) const
+bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader, bool bReload, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage, const std::string &prefixCode, const std::unordered_map<std::string, std::string> &definitions) const
 {
 	auto &stages = shader.GetStages();
 	std::vector<std::string> glslCodePerStage;
@@ -648,8 +652,8 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader,PipelineID p
 	auto &pipelineData = m_pipelines.at(pipelineId);
 	uint32_t bufferBindingPoint = 1; // 0 is reserved for push constants
 	uint32_t imageBindingPoint = 0;
-	pipelineData.descriptorSetBindingsToBindingPoints.reserve(pipelineInfo.descSetInfos.size());
-	for(auto &dsCreateInfo : pipelineInfo.descSetInfos)
+	pipelineData.descriptorSetBindingsToBindingPoints.reserve(pipelineInfo.createInfo->GetDsCreateInfoItems()->size());
+	for(auto &dsCreateInfo : *(pipelineInfo.createInfo->GetDsCreateInfoItems()))
 	{
 		pipelineData.descriptorSetBindingsToBindingPoints.push_back({});
 		auto &dsBindingsToBindingPoints = pipelineData.descriptorSetBindingsToBindingPoints.back();
@@ -723,14 +727,14 @@ bool prosper::GLContext::QueryResult(const Query &query,uint64_t &r) const
 {
 	return false; // TODO
 }
-void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_ptr<prosper::IPrimaryCommandBuffer>&,uint32_t)> &drawFrame)
+void prosper::GLContext::DrawFrame(const std::function<void()> &drawFrame) //move to GLWindow?
 {
 	// TODO: Wait for fences?
 	auto &glWindow = static_cast<GLWindow&>(*m_window);
 	glWindow.m_lastAcquiredSwapchainImageIndex = (glWindow.m_lastAcquiredSwapchainImageIndex == 1) ? 0 : 1;
 	ClearKeepAliveResources();
 
-	auto &cmdBuffer = m_commandBuffers.at(glWindow.m_lastAcquiredSwapchainImageIndex);
+	auto &cmdBuffer = GetWindow().GetDrawCommandBuffer();
 	// TODO: Start recording?
 	cmdBuffer->StartRecording(false,true);
 	umath::set_flag(m_stateFlags,StateFlags::IsRecording);
@@ -741,7 +745,7 @@ void prosper::GLContext::DrawFrame(const std::function<void(const std::shared_pt
 		f(*cmdBuffer);
 		m_scheduledBufferUpdates.pop();
 	}
-	drawFrame(GetDrawCommandBuffer(),glWindow.m_lastAcquiredSwapchainImageIndex);
+	drawFrame();
 
 	/* Close the recording process */
 	umath::set_flag(m_stateFlags,StateFlags::IsRecording,false);
@@ -761,6 +765,7 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf,bool shouldBlock,IFence *
 void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
 	IPrContext::Initialize(createInfo);
+	/*
 	m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
 	m_hShaderClear = m_shaderManager->GetShader("clear_image");
 
@@ -769,10 +774,15 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 
 	m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
 	m_hShaderFlipY = m_shaderManager->GetShader("flip_y");
+	*/
+	m_hShaderClear = m_shaderManager->GetShader("clear_color");
+	m_hShaderFlipY = m_shaderManager->GetShader("flip_image");
 }
-prosper::ShaderClear *prosper::GLContext::GetClearShader() const {return static_cast<prosper::ShaderClear*>(m_hShaderClear.get());}
+
+pragma::ShaderClearColor *prosper::GLContext::GetClearShader() const { return static_cast<pragma::ShaderClearColor *>(m_hShaderClear.get()); }
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
-prosper::ShaderFlipY *prosper::GLContext::GetFlipYShader() const {return static_cast<prosper::ShaderFlipY*>(m_hShaderFlipY.get());}
+pragma::ShaderFlipImage *prosper::GLContext::GetFlipYShader() const { return static_cast<pragma::ShaderFlipImage *>(m_hShaderFlipY.get()); }
+
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle() {glFinish();}
@@ -785,7 +795,9 @@ void prosper::GLContext::ReloadSwapchain()
 void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 {
 	InitWindow();
-	InitCommandBuffers();
+	//GetWindow().InitCommandBuffers();
+	//GetWindow().InitSwapchain();
+	
 	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		std::cout<<"Failed to initialize GLAD"<<std::endl;
@@ -964,7 +976,7 @@ std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::CreateDescript
 {
 	return GLDescriptorSetGroup::Create(*this,descSetInfo);
 }
-std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(Window &window,bool allowMt)
+std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(Window &window, bool allowMt, const std::string &debugName)
 {
 	// OpenGL does not support multi-threaded rendering
 	return std::make_shared<StSwapCommandBufferGroup>(window);

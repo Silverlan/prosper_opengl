@@ -28,12 +28,14 @@ namespace prosper
 
 		virtual bool Update() override;
 	protected:
+		//TODO: implement these
 		virtual bool DoSetBindingStorageImage(prosper::Texture &texture,uint32_t bindingIdx,const std::optional<uint32_t> &layerId) override {return true;}
 		virtual bool DoSetBindingTexture(prosper::Texture &texture,uint32_t bindingIdx,const std::optional<uint32_t> &layerId) override {return true;}
 		virtual bool DoSetBindingArrayTexture(prosper::Texture &texture,uint32_t bindingIdx,uint32_t arrayIndex,const std::optional<uint32_t> &layerId) override {return true;}
 		virtual bool DoSetBindingUniformBuffer(prosper::IBuffer &buffer,uint32_t bindingIdx,uint64_t startOffset,uint64_t size) override {return true;}
 		virtual bool DoSetBindingDynamicUniformBuffer(prosper::IBuffer &buffer,uint32_t bindingIdx,uint64_t startOffset,uint64_t size) override {return true;}
 		virtual bool DoSetBindingStorageBuffer(prosper::IBuffer &buffer,uint32_t bindingIdx,uint64_t startOffset,uint64_t size) override {return true;}
+		virtual bool DoSetBindingDynamicStorageBuffer(prosper::IBuffer &buffer, uint32_t bindingIdx, uint64_t startOffset, uint64_t size) override { return true; };
 	};
 };
 
