@@ -779,9 +779,7 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 	m_hShaderFlipY = m_shaderManager->GetShader("flip_image");
 }
 
-pragma::ShaderClearColor *prosper::GLContext::GetClearShader() const { return static_cast<pragma::ShaderClearColor *>(m_hShaderClear.get()); }
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const {return static_cast<prosper::ShaderBlit*>(m_hShaderBlit.get());}
-pragma::ShaderFlipImage *prosper::GLContext::GetFlipYShader() const { return static_cast<pragma::ShaderFlipImage *>(m_hShaderFlipY.get()); }
 
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
