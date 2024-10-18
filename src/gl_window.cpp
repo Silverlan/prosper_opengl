@@ -90,6 +90,8 @@ void GLWindow::DoInitSwapchain()
 	auto imgView = GLImageView::Create(GetContext(), *img, imgViewCreateInfo, prosper::ImageViewType::e2D, prosper::ImageAspectFlags::ColorBit);
 	auto framebuffer = std::shared_ptr<GLFramebuffer> {new GLFramebuffer {GetContext(), {imgView}, imgCreateInfo.width, imgCreateInfo.height, 1, 1, 0}};
 	m_swapchainFramebuffers = {framebuffer, framebuffer};
+
+	OnSwapchainInitialized();
 }
 void GLWindow::DoReleaseSwapchain()
 {

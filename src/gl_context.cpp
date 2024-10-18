@@ -567,8 +567,9 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader, PipelineID 
 	auto &pipelineData = m_pipelines.at(pipelineId);
 	uint32_t bufferBindingPoint = 1; // 0 is reserved for push constants
 	uint32_t imageBindingPoint = 0;
-	pipelineData.descriptorSetBindingsToBindingPoints.reserve(pipelineInfo.createInfo->GetDsCreateInfoItems()->size());
-	for(auto &dsCreateInfo : *(pipelineInfo.createInfo->GetDsCreateInfoItems())) {
+	auto &resources = shader.GetShaderResources();
+	pipelineData.descriptorSetBindingsToBindingPoints.reserve(resources.descSetInfos.size());
+	for(auto &dsCreateInfo : resources.descSetInfos) {
 		pipelineData.descriptorSetBindingsToBindingPoints.push_back({});
 		auto &dsBindingsToBindingPoints = pipelineData.descriptorSetBindingsToBindingPoints.back();
 		auto numBindings = dsCreateInfo->GetBindingCount();
@@ -690,9 +691,24 @@ void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const { return static_cast<prosper::ShaderBlit *>(m_hShaderBlit.get()); }
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
-void prosper::GLContext::DoWaitIdle() { glFinish(); }
+void prosper::GLContext::DoWaitIdle()
+{
+	if(!umath::is_flag_set(m_stateFlags, StateFlags::Initialized))
+		return;
+	glFinish();
+}
 void prosper::GLContext::DoFlushCommandBuffer(ICommandBuffer &cmd) { glFinish(); }
-void prosper::GLContext::ReloadSwapchain() {}
+void prosper::GLContext::ReloadSwapchain()
+{
+	WaitIdle();
+	for(auto &window : m_windows) {
+		if(!window || window->IsValid() == false)
+			continue;
+		auto &vlkWindow = static_cast<GLWindow &>(*window);
+		vlkWindow.ReloadSwapchain();
+	}
+	OnSwapchainInitialized();
+}
 
 void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 {
@@ -764,6 +780,7 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 	m_shaderManager = std::make_unique<ShaderManager>(*this);
 	InitPushConstantBuffer();
 	InitTemporaryBuffer();
+	ReloadSwapchain();
 	CheckResult();
 }
 
