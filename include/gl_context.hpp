@@ -69,6 +69,8 @@ namespace prosper {
 		virtual std::shared_ptr<ShaderStageProgram> CompileShader(prosper::ShaderStage stage, const std::string &shaderPath, std::string &outInfoLog, std::string &outDebugInfoLog, bool reload = false, const std::string &prefixCode = {},
 		  const std::unordered_map<std::string, std::string> &definitions = {}) override;
 		virtual bool GetParsedShaderSourceCode(prosper::Shader &shader, std::vector<std::string> &outGlslCodePerStage, std::vector<prosper::ShaderStage> &outGlslCodeStages, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage) const override;
+		bool GetParsedShaderSourceCode(prosper::Shader &shader, std::vector<std::string> &outGlslCodePerStage, std::vector<prosper::ShaderStage> &outGlslCodeStages, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage, const std::string &prefixCode,
+		  const std::unordered_map<std::string, std::string> &definitions) const;
 		//std::optional<std::string> CompileShaders(prosper::ShaderStage stage,const std::string &shaderPath,std::string &outInfoLog,std::string &outDebugInfoLog) const;
 		virtual bool InitializeShaderSources(prosper::Shader &shader, bool bReload, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage, const std::string &prefixCode = {},
 		  const std::unordered_map<std::string, std::string> &definitions = {}) const override;

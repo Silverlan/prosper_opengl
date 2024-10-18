@@ -332,7 +332,8 @@ std::shared_ptr<prosper::ShaderStageProgram> prosper::GLContext::CompileShader(p
 		return nullptr;
 	return GLShaderStage::Compile(stage, *shaderCode, outInfoLog);
 }
-bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader, std::vector<std::string> &outGlslCodePerStage, std::vector<prosper::ShaderStage> &outGlslCodeStages, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage) const
+bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader, std::vector<std::string> &outGlslCodePerStage, std::vector<prosper::ShaderStage> &outGlslCodeStages, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage,
+  const std::string &prefixCode, const std::unordered_map<std::string, std::string> &definitions) const
 {
 	outErrStage = prosper::ShaderStage::Unknown;
 	auto &stages = shader.GetStages();
@@ -345,7 +346,10 @@ bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader, std:
 		if(stage == nullptr || stage->path.empty())
 			continue;
 		stage->stage = static_cast<prosper::ShaderStage>(i);
-		auto glslCode = prosper::glsl::load_glsl(const_cast<GLContext &>(*this), stage->stage, stage->path, &outInfoLog, &outDebugInfoLog);
+		std::vector<prosper::glsl::IncludeLine> includeLines;
+		unsigned int lineOffset = 0;
+		auto applyPreprocessing = true;
+		auto glslCode = prosper::glsl::load_glsl(const_cast<GLContext &>(*this), stage->stage, stage->path, &outInfoLog, &outDebugInfoLog, includeLines, lineOffset, prefixCode, definitions, applyPreprocessing);
 		if(glslCode.has_value() == false) {
 			outErrStage = stage->stage;
 			return false;
@@ -365,12 +369,16 @@ bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader, std:
 	}
 	return util::convert_glsl_set_bindings_to_opengl_binding_points(glslCodePerStage, outInfoLog);
 }
+bool prosper::GLContext::GetParsedShaderSourceCode(prosper::Shader &shader, std::vector<std::string> &outGlslCodePerStage, std::vector<prosper::ShaderStage> &outGlslCodeStages, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage) const
+{
+	return GetParsedShaderSourceCode(shader, outGlslCodePerStage, outGlslCodeStages, outInfoLog, outDebugInfoLog, outErrStage, {}, {});
+}
 bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader, bool bReload, std::string &outInfoLog, std::string &outDebugInfoLog, prosper::ShaderStage &outErrStage, const std::string &prefixCode, const std::unordered_map<std::string, std::string> &definitions) const
 {
 	auto &stages = shader.GetStages();
 	std::vector<std::string> glslCodePerStage;
 	std::vector<prosper::ShaderStage> glslCodeStages;
-	if(GetParsedShaderSourceCode(shader, glslCodePerStage, glslCodeStages, outInfoLog, outDebugInfoLog, outErrStage) == false)
+	if(GetParsedShaderSourceCode(shader, glslCodePerStage, glslCodeStages, outInfoLog, outDebugInfoLog, outErrStage, prefixCode, definitions) == false)
 		return false;
 
 	auto &logCallback = shader.GetLogCallback();
