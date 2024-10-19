@@ -100,22 +100,18 @@ bool GLImage::WriteImageData(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uin
 		if(w != util::calculate_mipmap_size(GetWidth(), mipLevel) || h != util::calculate_mipmap_size(GetHeight(), mipLevel))
 			return false;
 		auto format = prosper::util::to_opengl_image_format(GetFormat());
-		if(is3DType == false) {
+		if(is3DType == false)
 			glCompressedTexSubImage2D(type, mipLevel, x, y, w, h, format, size, data);
-		}
-		else {
+		else
 			glCompressedTexSubImage3D(type, mipLevel, x, y, layerIndex, w, h, 1, format, size, data);
-		}
 		return static_cast<GLContext &>(GetContext()).CheckResult();
 	}
 	GLboolean normalized;
 	auto imgFormatType = util::to_opengl_image_format_type(GetFormat(), normalized);
-	if(is3DType == false) {
+	if(is3DType == false)
 		glTexSubImage2D(type, mipLevel, x, y, w, h, GetPixelDataFormat(), imgFormatType, data);
-	}
-	else {
+	else
 		glTexSubImage3D(type, mipLevel, x, y, layerIndex, w, h, 1, GetPixelDataFormat(), imgFormatType, data);
-	}
 	return static_cast<GLContext &>(GetContext()).CheckResult();
 }
 bool GLImage::IsLayered() const { return IsLayered(GetCreateInfo()); }
