@@ -11,9 +11,8 @@
 #include "buffers/gl_buffer.hpp"
 #include "buffers/gl_render_buffer.hpp"
 #include "shader/prosper_shader.hpp"
-//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-//#include "shader/gl_shader_flip_y.hpp"
+#include "shader/prosper_shader_flip_image.hpp"
 #include "gl_render_pass.hpp"
 #include "gl_framebuffer.hpp"
 #include "gl_descriptor_set_group.hpp"
@@ -689,8 +688,27 @@ bool prosper::GLCommandBuffer::ResetQuery(const Query &query) const
 
 bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img, IImage &swapchainImg, IFramebuffer &swapchainFramebuffer)
 {
-	glBlitNamedFramebuffer(static_cast<GLImage &>(img).GetOrCreateFramebuffer(0, 1, 0, 1)->GetGLFramebuffer(), static_cast<GLFramebuffer &>(swapchainFramebuffer).GetGLFramebuffer(), 0, 0, img.GetWidth(), img.GetHeight(), 0, 0, swapchainImg.GetWidth(), swapchainImg.GetHeight(),
-	  GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	//glBlitNamedFramebuffer(static_cast<GLImage &>(img).GetOrCreateFramebuffer(0, 1, 0, 1)->GetGLFramebuffer(), static_cast<GLFramebuffer &>(swapchainFramebuffer).GetGLFramebuffer(), 0, 0, img.GetWidth(), img.GetHeight(), 0, 0, swapchainImg.GetWidth(), swapchainImg.GetHeight(),
+	//  GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	auto &context = static_cast<prosper::GLContext &>(GetContext());
+	auto *shaderFlip = context.GetFlipShader();
+	if(shaderFlip == nullptr)
+		return false;
+
+	GLint drawFboId = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	static_cast<GLPrimaryCommandBuffer *>(this)->SetActiveRenderPassTarget(nullptr, 0, &swapchainImg, &swapchainFramebuffer);
+	ShaderBindState bindState {*this};
+	if(shaderFlip->RecordBeginDraw(bindState)) {
+		glBindTextureUnit(0, static_cast<GLImage &>(img).GetGLImage());
+		shaderFlip->RecordDraw(bindState.commandBuffer, false /* flipHorizontally */, true /* flipVertically */);
+		shaderFlip->RecordEndDraw(bindState);
+	}
+
+	static_cast<GLPrimaryCommandBuffer *>(this)->SetActiveRenderPassTarget(nullptr, 0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFboId);
 	return true;
 }
 

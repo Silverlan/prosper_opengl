@@ -21,9 +21,8 @@
 #include "gl_command_buffer.hpp"
 #include "gl_window.hpp"
 #include "shader/prosper_shader.hpp"
-//#include "shader/gl_shader_clear.hpp"
 #include "shader/gl_shader_blit.hpp"
-//#include "shader/gl_shader_flip_y.hpp"
+#include <shader/prosper_shader_flip_image.hpp>
 #include <prosper_swap_command_buffer.hpp>
 #include <shader/prosper_pipeline_create_info.hpp>
 #include <prosper_glsl.hpp>
@@ -676,21 +675,11 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf, bool shouldBlock, IFence
 void prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
 	IPrContext::Initialize(createInfo);
-	/*
-	m_shaderManager->RegisterShader("clear_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderClear(context,identifier);});
-	m_hShaderClear = m_shaderManager->GetShader("clear_image");
-
-	m_shaderManager->RegisterShader("blit_image",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderBlit(context,identifier);});
-	m_hShaderBlit = m_shaderManager->GetShader("blit_image");
-
-	m_shaderManager->RegisterShader("flip_y",[](prosper::IPrContext &context,const std::string &identifier) {return new prosper::ShaderFlipY(context,identifier);});
-	m_hShaderFlipY = m_shaderManager->GetShader("flip_y");
-	*/
-	m_hShaderClear = m_shaderManager->GetShader("clear_color");
-	m_hShaderFlipY = m_shaderManager->GetShader("flip_image");
+	m_hShaderFlip = m_shaderManager->GetShader("flip_image");
 }
 
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const { return static_cast<prosper::ShaderBlit *>(m_hShaderBlit.get()); }
+prosper::ShaderFlipImage *prosper::GLContext::GetFlipShader() const { return static_cast<prosper::ShaderFlipImage *>(m_hShaderFlip.get()); }
 
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle()

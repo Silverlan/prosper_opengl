@@ -15,9 +15,8 @@
 
 class GLShaderProgram;
 namespace prosper {
-	//class ShaderClear;
 	class ShaderBlit;
-	//class ShaderFlipY;
+	class ShaderFlipImage;
 	class GLBuffer;
 	class BasePipelineCreateInfo;
 
@@ -48,7 +47,7 @@ namespace prosper {
 		virtual uint64_t ClampDeviceMemorySize(uint64_t size, float percentageOfGPUMemory, MemoryFeatureFlags featureFlags) const override;
 		virtual DeviceSize CalcBufferAlignment(BufferUsageFlags usageFlags) override;
 
-		virtual bool ShouldFlipTexturesOnLoad() const override { return true; }
+		virtual bool ShouldFlipTexturesOnLoad() const override { return false; }
 		virtual uint32_t GetReservedDescriptorResourceCount(DescriptorResourceType resType) const override
 		{
 			if(resType == DescriptorResourceType::UniformBufferObject)
@@ -103,6 +102,7 @@ namespace prosper {
 		virtual void Initialize(const CreateInfo &createInfo) override;
 
 		ShaderBlit *GetBlitShader() const;
+		ShaderFlipImage *GetFlipShader() const;
 
 		virtual std::shared_ptr<IEvent> CreateEvent() override;
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled = false) override;
@@ -138,9 +138,8 @@ namespace prosper {
 			std::shared_ptr<GLShaderProgram> program = nullptr;
 			std::vector<std::vector<uint32_t>> descriptorSetBindingsToBindingPoints {};
 		};
-		::util::WeakHandle<Shader> m_hShaderClear {};
 		::util::WeakHandle<Shader> m_hShaderBlit {};
-		::util::WeakHandle<Shader> m_hShaderFlipY {};
+		::util::WeakHandle<Shader> m_hShaderFlip {};
 		std::shared_ptr<IBuffer> m_pushConstantBuffer = nullptr;
 		std::vector<PipelineData> m_pipelines = {};
 		std::queue<size_t> m_freePipelineIndices {};
