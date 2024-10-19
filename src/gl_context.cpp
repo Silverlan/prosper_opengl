@@ -478,7 +478,7 @@ prosper::DeviceSize prosper::GLContext::CalcBufferAlignment(BufferUsageFlags usa
 
 void prosper::GLContext::GetGLSLDefinitions(glsl::Definitions &outDef) const
 {
-	outDef.layoutId = "binding = (setIndex *10 +bindingIndex +1)";
+	outDef.layoutId = "binding = resourceBindingIndex"; // Slot 0 is reserved for push constant buffer
 	outDef.layoutPushConstants = "std140, binding = 0"; // Index 0 is reserved for push constants
 	outDef.vertexIndex = "gl_VertexID";
 	outDef.instanceIndex = "gl_InstanceID";
@@ -573,8 +573,9 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader, PipelineID 
 {
 	auto &pipelineInfo = *shader.GetPipelineInfo(shaderPipelineId);
 	auto &pipelineData = m_pipelines.at(pipelineId);
-	uint32_t bufferBindingPoint = 1; // 0 is reserved for push constants
-	uint32_t imageBindingPoint = 0;
+	std::array<uint32_t, umath::to_integral(DescriptorResourceType::Count)> bindingPoints {};
+	for(size_t i = 0; i < bindingPoints.size(); ++i)
+		bindingPoints[i] = GetReservedDescriptorResourceCount(static_cast<DescriptorResourceType>(i));
 	auto &resources = shader.GetShaderResources();
 	pipelineData.descriptorSetBindingsToBindingPoints.reserve(resources.descSetInfos.size());
 	for(auto &dsCreateInfo : resources.descSetInfos) {
@@ -588,18 +589,11 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader, PipelineID 
 			if(dsCreateInfo->GetBindingPropertiesByBindingIndex(i, &descType, &arraySize) == false)
 				continue;
 			arraySize = umath::max(arraySize, static_cast<uint32_t>(1));
-			switch(descType) {
-			case prosper::DescriptorType::Sampler:
-			case prosper::DescriptorType::CombinedImageSampler:
-			case prosper::DescriptorType::SampledImage:
-			case prosper::DescriptorType::StorageImage:
-				dsBindingsToBindingPoints.at(i) = imageBindingPoint;
-				imageBindingPoint += arraySize;
-				break;
-			default:
-				dsBindingsToBindingPoints.at(i) = bufferBindingPoint;
-				bufferBindingPoint += arraySize;
-				break;
+			auto resType = get_descriptor_resource_type(descType);
+			if(resType) {
+				auto &bindingPoint = bindingPoints[umath::to_integral(*resType)];
+				dsBindingsToBindingPoints.at(i) = bindingPoint;
+				bindingPoint += arraySize;
 			}
 		}
 	}

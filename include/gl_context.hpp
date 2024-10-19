@@ -49,6 +49,13 @@ namespace prosper {
 		virtual DeviceSize CalcBufferAlignment(BufferUsageFlags usageFlags) override;
 
 		virtual bool ShouldFlipTexturesOnLoad() const override { return true; }
+		virtual uint32_t GetReservedDescriptorResourceCount(DescriptorResourceType resType) const override
+		{
+			if(resType == DescriptorResourceType::UniformBufferObject)
+				return 1; // Index 0 is reserved for push constant buffer
+			return 0;
+		}
+
 		virtual void GetGLSLDefinitions(glsl::Definitions &outDef) const override;
 
 		virtual bool SavePipelineCache() override;
