@@ -48,6 +48,7 @@ namespace prosper {
 		virtual uint64_t ClampDeviceMemorySize(uint64_t size, float percentageOfGPUMemory, MemoryFeatureFlags featureFlags) const override;
 		virtual DeviceSize CalcBufferAlignment(BufferUsageFlags usageFlags) override;
 
+		virtual bool ShouldFlipTexturesOnLoad() const override { return true; }
 		virtual void GetGLSLDefinitions(glsl::Definitions &outDef) const override;
 
 		virtual bool SavePipelineCache() override;
