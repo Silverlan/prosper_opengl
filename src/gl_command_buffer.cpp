@@ -527,6 +527,14 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 			glDisable(GL_CULL_FACE);
 			break;
 		}
+		switch(frontFace) {
+		case prosper::FrontFace::Clockwise:
+			glFrontFace(GL_CW);
+			break;
+		case prosper::FrontFace::CounterClockwise:
+			glFrontFace(GL_CCW);
+			break;
+		}
 		glLineWidth(lineWidth);
 
 		auto useScissor = false;
