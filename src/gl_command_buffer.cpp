@@ -765,7 +765,10 @@ bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::Bu
 		size = glImgDst.GetLayerSize(imgExtent.x, imgExtent.y);
 	else {
 		glGetTextureLevelParameteriv(glImgDst.GetGLImage(), copyInfo.mipLevel, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &size);
-		size /= glImgDst.GetLayerCount();
+		auto numLayers = glImgDst.GetLayerCount();
+		if(imgDst.IsCubemap())
+			numLayers = 1;
+		size /= numLayers;
 	}
 	imgData.resize(size);
 	for(auto iLayer = copyInfo.baseArrayLayer; iLayer < (copyInfo.baseArrayLayer + copyInfo.layerCount); ++iLayer) {
