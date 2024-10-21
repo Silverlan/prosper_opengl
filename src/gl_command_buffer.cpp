@@ -702,8 +702,9 @@ bool prosper::GLCommandBuffer::RecordPresentImage(IImage &img, IImage &swapchain
 	static_cast<GLPrimaryCommandBuffer *>(this)->SetActiveRenderPassTarget(nullptr, 0, &swapchainImg, &swapchainFramebuffer);
 	ShaderBindState bindState {*this};
 	if(shaderFlip->RecordBeginDraw(bindState)) {
+		SetViewport(0, 0, img.GetWidth(), img.GetHeight());
 		glBindTextureUnit(0, static_cast<GLImage &>(img).GetGLImage());
-		shaderFlip->RecordDraw(bindState.commandBuffer, false /* flipHorizontally */, true /* flipVertically */);
+		shaderFlip->RecordDraw(bindState, false /* flipHorizontally */, true /* flipVertically */);
 		shaderFlip->RecordEndDraw(bindState);
 	}
 
