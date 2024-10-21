@@ -23,13 +23,12 @@ std::shared_ptr<GLWindow> GLWindow::Create(const WindowSettings &windowCreationI
 	return window;
 }
 
-void GLWindow::InitWindow()
+void GLWindow::InitWindow(bool keepContext)
 {
-	/* Create a window */
-	//m_windowPtr = Anvil::WindowFactory::create_window(platform,appName,width,height,true,std::bind(&Context::DrawFrame,this));
+	if(!keepContext)
+		m_glfwWindow = {};
 
 	// TODO: Clean this up
-	m_glfwWindow = nullptr;
 	GLFW::poll_events();
 	auto settings = m_settings;
 	if(!settings.windowedMode && (settings.monitor.has_value() == false || settings.monitor->GetGLFWMonitor() == nullptr))
@@ -37,7 +36,13 @@ void GLWindow::InitWindow()
 	settings.api = GLFW::WindowCreationInfo::API::OpenGL;
 	if(GetContext().IsValidationEnabled())
 		settings.flags |= GLFW::WindowCreationInfo::Flags::DebugContext;
-	m_glfwWindow = GLFW::Window::Create(settings); // TODO: Release
+	if(m_glfwWindow) {
+		// Don't re-create the window (which would destroy the OpenGL context),
+		// just try to re-initialize it with the new settings.
+		m_glfwWindow->Reinitialize(settings);
+	}
+	else
+		m_glfwWindow = GLFW::Window::Create(settings); // TODO: Release
 
 	const char *errDesc;
 	auto err = glfwGetError(&errDesc);
@@ -60,6 +65,7 @@ void GLWindow::InitWindow()
 
 	OnWindowInitialized();
 }
+void GLWindow::InitWindow() { InitWindow(false); }
 void GLWindow::ReleaseWindow()
 {
 	ReleaseSwapchain();
@@ -97,6 +103,13 @@ void GLWindow::DoReleaseSwapchain()
 {
 	m_swapchainImages.clear();
 	m_swapchainFramebuffers.clear();
+}
+
+void GLWindow::DoReloadWindow()
+{
+	ReleaseSwapchain();
+	InitWindow(true);
+	ReloadSwapchain();
 }
 
 void GLWindow::InitCommandBuffers()

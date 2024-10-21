@@ -21,11 +21,13 @@ namespace prosper {
 	  protected:
 		friend GLContext;
 		using Window::Window;
+		void InitWindow(bool keepContext);
 		virtual void InitWindow() override;
 		virtual void ReleaseWindow() override;
 		virtual void DoInitSwapchain() override;
 		virtual void DoReleaseSwapchain() override;
 		virtual void InitCommandBuffers() override;
+		virtual void DoReloadWindow() override;
 
 		uint32_t m_lastAcquiredSwapchainImageIndex = 0;
 	};
