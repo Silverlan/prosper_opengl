@@ -775,8 +775,6 @@ bool prosper::GLCommandBuffer::DoRecordCopyBufferToImage(const prosper::util::Bu
 	else {
 		glGetTextureLevelParameteriv(glImgDst.GetGLImage(), copyInfo.mipLevel, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &size);
 		auto numLayers = glImgDst.GetLayerCount();
-		if(imgDst.IsCubemap())
-			numLayers = 1;
 		size /= numLayers;
 	}
 	imgData.resize(size);
