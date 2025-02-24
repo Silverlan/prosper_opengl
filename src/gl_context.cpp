@@ -29,9 +29,10 @@
 #include <thread>
 #include <sharedutils/util_string.h>
 #include <buffers/prosper_buffer_create_info.hpp>
-#include <iglfw/glfw_window.h>
 #include <fsys/filesystem.h>
 #include <numeric>
+
+import pragma.platform;
 
 struct GLShaderStage;
 class GLShaderProgram {

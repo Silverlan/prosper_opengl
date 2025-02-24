@@ -29,20 +29,20 @@ void GLWindow::InitWindow(bool keepContext)
 		m_glfwWindow = {};
 
 	// TODO: Clean this up
-	GLFW::poll_events();
+	pragma::platform::poll_events();
 	auto settings = m_settings;
 	if(!settings.windowedMode && (settings.monitor.has_value() == false || settings.monitor->GetGLFWMonitor() == nullptr))
-		settings.monitor = GLFW::get_primary_monitor();
-	settings.api = GLFW::WindowCreationInfo::API::OpenGL;
+		settings.monitor = pragma::platform::get_primary_monitor();
+	settings.api = pragma::platform::WindowCreationInfo::API::OpenGL;
 	if(GetContext().IsValidationEnabled())
-		settings.flags |= GLFW::WindowCreationInfo::Flags::DebugContext;
+		settings.flags |= pragma::platform::WindowCreationInfo::Flags::DebugContext;
 	if(m_glfwWindow) {
 		// Don't re-create the window (which would destroy the OpenGL context),
 		// just try to re-initialize it with the new settings.
 		m_glfwWindow->Reinitialize(settings);
 	}
 	else
-		m_glfwWindow = GLFW::Window::Create(settings); // TODO: Release
+		m_glfwWindow = pragma::platform::Window::Create(settings); // TODO: Release
 
 	const char *errDesc;
 	auto err = glfwGetError(&errDesc);
@@ -58,7 +58,7 @@ void GLWindow::InitWindow(bool keepContext)
 	m_settings.width = actualWindowSize.x;
 	m_settings.height = actualWindowSize.y;
 
-	m_glfwWindow->SetResizeCallback([](GLFW::Window &window, Vector2i size) {
+	m_glfwWindow->SetResizeCallback([](pragma::platform::Window &window, Vector2i size) {
 		std::cout << "Resizing..." << std::endl; // TODO
 	});
 	glfwMakeContextCurrent(const_cast<GLFWwindow *>(m_glfwWindow->GetGLFWWindow()));
