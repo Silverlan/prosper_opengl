@@ -7,8 +7,7 @@ pr_add_dependency(${PROJ_NAME} prosper TARGET PUBLIC)
 add_subdirectory("third_party_libs/glad")
 pr_add_dependency(${PROJ_NAME} glad TARGET PUBLIC)
 
-pr_add_headers(${PROJ_NAME} "include/")
-pr_add_sources(${PROJ_NAME} "src/")
+pr_init_module(${PROJ_NAME})
 
 pr_add_compile_definitions(${PROJ_NAME} -DSHPROSPER_OPENGL_DLL PUBLIC)
 
