@@ -38,20 +38,20 @@ bool GLBuffer::DoMap(Offset offset, Size size, MapFlags mapFlags, void **optOutM
 	}
 	GLbitfield access = 0;
 	auto &createInfo = GetCreateInfo();
-	/*if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) == false)
+	/*if(pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) == false)
 		access |= GL_MAP_WRITE_BIT;
-	if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::HostAccessable))
+	if(pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::HostAccessable))
 		access |= GL_MAP_READ_BIT;*/
-	if(umath::is_flag_set(mapFlags, MapFlags::ReadBit))
+	if(pragma::math::is_flag_set(mapFlags, MapFlags::ReadBit))
 		access |= GL_MAP_READ_BIT;
-	if(umath::is_flag_set(mapFlags, MapFlags::WriteBit))
+	if(pragma::math::is_flag_set(mapFlags, MapFlags::WriteBit))
 		access |= GL_MAP_WRITE_BIT;
-	if(umath::is_flag_set(mapFlags, MapFlags::Unsynchronized))
+	if(pragma::math::is_flag_set(mapFlags, MapFlags::Unsynchronized))
 		access |= GL_MAP_UNSYNCHRONIZED_BIT;
-	if(umath::is_flag_set(createInfo.memoryFeatures, prosper::MemoryFeatureFlags::HostCoherent))
+	if(pragma::math::is_flag_set(createInfo.memoryFeatures, prosper::MemoryFeatureFlags::HostCoherent))
 		access |= GL_MAP_COHERENT_BIT;
-	if(umath::is_flag_set(mapFlags, MapFlags::PersistentBit)) {
-		if(umath::is_flag_set(createInfo.flags, util::BufferCreateInfo::Flags::Persistent) == false)
+	if(pragma::math::is_flag_set(mapFlags, MapFlags::PersistentBit)) {
+		if(pragma::math::is_flag_set(createInfo.flags, util::BufferCreateInfo::Flags::Persistent) == false)
 			throw std::logic_error {"Attempted to map buffer persistently, but buffer has not been created with persistent flag!"};
 		access |= GL_MAP_PERSISTENT_BIT;
 	}

@@ -132,8 +132,8 @@ export namespace prosper {
 			std::shared_ptr<GLShaderProgram> program = nullptr;
 			std::vector<std::vector<uint32_t>> descriptorSetBindingsToBindingPoints {};
 		};
-		::util::WeakHandle<Shader> m_hShaderBlit {};
-		::util::WeakHandle<Shader> m_hShaderFlip {};
+		pragma::util::WeakHandle<Shader> m_hShaderBlit {};
+		pragma::util::WeakHandle<Shader> m_hShaderFlip {};
 		std::shared_ptr<IBuffer> m_pushConstantBuffer = nullptr;
 		std::vector<PipelineData> m_pipelines = {};
 		std::queue<size_t> m_freePipelineIndices {};

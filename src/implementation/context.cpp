@@ -368,7 +368,7 @@ bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader, bool b
 			outErrStage = stage;
 			return false;
 		}
-		stages.at(umath::to_integral(stage))->program = shaderStageProgram;
+		stages.at(pragma::math::to_integral(stage))->program = shaderStageProgram;
 	}
 #if 0
 	// Output final shader code
@@ -383,7 +383,7 @@ bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader, bool b
 				postfix = "_frag";
 			else if(stage == prosper::ShaderStage::Vertex)
 				postfix = "_vert";
-			auto f = FileManager::OpenFile<VFilePtrReal>(("shader_error" +postfix +".txt").c_str(),"wb");
+			auto f = FileManager::OpenFile<fs::VFilePtrReal>(("shader_error" +postfix +".txt").c_str(),"wb");
 			if(f)
 			{
 				f->WriteString(glslCodePerStage.at(it -glslCodeStages.begin()));
@@ -400,11 +400,11 @@ bool prosper::GLContext::InitializeShaderSources(prosper::Shader &shader, bool b
 prosper::Vendor prosper::GLContext::GetPhysicalDeviceVendor() const
 {
 	std::string vendor = reinterpret_cast<const char *>(glGetString(GL_VENDOR));
-	if(ustring::match(vendor, "*intel*"))
+	if(pragma::string::match(vendor, "*intel*"))
 		return Vendor::Intel;
-	else if(ustring::match(vendor, "*AMD*"))
+	else if(pragma::string::match(vendor, "*AMD*"))
 		return Vendor::AMD;
-	else if(ustring::match(vendor, "*NVIDIA*"))
+	else if(pragma::string::match(vendor, "*NVIDIA*"))
 		return Vendor::Nvidia;
 	return Vendor::Unknown;
 }
@@ -440,9 +440,9 @@ uint64_t prosper::GLContext::ClampDeviceMemorySize(uint64_t size, float percenta
 prosper::DeviceSize prosper::GLContext::CalcBufferAlignment(BufferUsageFlags usageFlags)
 {
 	GLint bufferOffsetAlignment = 0;
-	if(umath::is_flag_set(usageFlags, BufferUsageFlags::UniformBufferBit))
+	if(pragma::math::is_flag_set(usageFlags, BufferUsageFlags::UniformBufferBit))
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &bufferOffsetAlignment);
-	if(umath::is_flag_set(usageFlags, BufferUsageFlags::StorageBufferBit)) {
+	if(pragma::math::is_flag_set(usageFlags, BufferUsageFlags::StorageBufferBit)) {
 		GLint storageBufferAlignment = 0;
 		glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &storageBufferAlignment);
 		if(storageBufferAlignment > 0) {
@@ -552,7 +552,7 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader, PipelineID 
 {
 	auto &pipelineInfo = *shader.GetPipelineInfo(shaderPipelineId);
 	auto &pipelineData = m_pipelines.at(pipelineId);
-	std::array<uint32_t, umath::to_integral(DescriptorResourceType::Count)> bindingPoints {};
+	std::array<uint32_t, pragma::math::to_integral(DescriptorResourceType::Count)> bindingPoints {};
 	for(size_t i = 0; i < bindingPoints.size(); ++i)
 		bindingPoints[i] = GetReservedDescriptorResourceCount(static_cast<DescriptorResourceType>(i));
 	auto &resources = shader.GetShaderResources();
@@ -567,10 +567,10 @@ void prosper::GLContext::InitShaderPipeline(prosper::Shader &shader, PipelineID 
 			uint32_t arraySize = 0;
 			if(dsCreateInfo->GetBindingPropertiesByBindingIndex(i, &descType, &arraySize) == false)
 				continue;
-			arraySize = umath::max(arraySize, static_cast<uint32_t>(1));
+			arraySize = pragma::math::max(arraySize, static_cast<uint32_t>(1));
 			auto resType = get_descriptor_resource_type(descType);
 			if(resType) {
-				auto &bindingPoint = bindingPoints[umath::to_integral(*resType)];
+				auto &bindingPoint = bindingPoints[pragma::math::to_integral(*resType)];
 				dsBindingsToBindingPoints.at(i) = bindingPoint;
 				bindingPoint += arraySize;
 			}
@@ -629,8 +629,8 @@ void prosper::GLContext::DrawFrame(const std::function<void()> &drawFrame) //mov
 	auto &cmdBuffer = GetWindow().GetDrawCommandBuffer();
 	// TODO: Start recording?
 	cmdBuffer->StartRecording(false, true);
-	umath::set_flag(m_stateFlags, StateFlags::IsRecording);
-	umath::set_flag(m_stateFlags, StateFlags::Idle, false);
+	pragma::math::set_flag(m_stateFlags, StateFlags::IsRecording);
+	pragma::math::set_flag(m_stateFlags, StateFlags::Idle, false);
 	while(m_scheduledBufferUpdates.empty() == false) {
 		auto &f = m_scheduledBufferUpdates.front();
 		f(*cmdBuffer);
@@ -639,7 +639,7 @@ void prosper::GLContext::DrawFrame(const std::function<void()> &drawFrame) //mov
 	drawFrame();
 
 	/* Close the recording process */
-	umath::set_flag(m_stateFlags, StateFlags::IsRecording, false);
+	pragma::math::set_flag(m_stateFlags, StateFlags::IsRecording, false);
 	cmdBuffer->StopRecording();
 	// TODO: Submit command buffer?
 
@@ -664,7 +664,7 @@ prosper::ShaderFlipImage *prosper::GLContext::GetFlipShader() const { return sta
 void prosper::GLContext::DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) {}
 void prosper::GLContext::DoWaitIdle()
 {
-	if(!umath::is_flag_set(m_stateFlags, StateFlags::Initialized))
+	if(!pragma::math::is_flag_set(m_stateFlags, StateFlags::Initialized))
 		return;
 	glFinish();
 }
@@ -770,30 +770,30 @@ std::shared_ptr<prosper::IBuffer> prosper::GLContext::CreateBuffer(const prosper
 	GLuint buf;
 	glCreateBuffers(1, &buf);
 
-	if(umath::is_flag_set(createInfo.flags, prosper::util::BufferCreateInfo::Flags::DontAllocateMemory) == false) {
+	if(pragma::math::is_flag_set(createInfo.flags, prosper::util::BufferCreateInfo::Flags::DontAllocateMemory) == false) {
 		// TODO: Remove Stream, Dynamic and Static flags?
 #if 0
 		auto usage = GL_STREAM_DRAW;
-		if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Stream))
-			usage = umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_STREAM_COPY :
-				umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_STREAM_READ : GL_STREAM_DRAW;
-		else if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Static))
-			usage = umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_STATIC_COPY :
-				umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_STATIC_READ : GL_STATIC_DRAW;
-		else if(umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Dynamic))
-			usage = umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_DYNAMIC_COPY :
-				umath::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_DYNAMIC_READ : GL_DYNAMIC_DRAW;
+		if(pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Stream))
+			usage = pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_STREAM_COPY :
+				pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_STREAM_READ : GL_STREAM_DRAW;
+		else if(pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Static))
+			usage = pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_STATIC_COPY :
+				pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_STATIC_READ : GL_STATIC_DRAW;
+		else if(pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::Dynamic))
+			usage = pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::CopyOnly) ? GL_DYNAMIC_COPY :
+				pragma::math::is_flag_set(createInfo.memoryFeatures,MemoryFeatureFlags::ReadOnly) ? GL_DYNAMIC_READ : GL_DYNAMIC_DRAW;
 #endif
 		GLbitfield flags = 0;
-		if(umath::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::ReadOnly) == false)
+		if(pragma::math::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::ReadOnly) == false)
 			flags |= GL_MAP_WRITE_BIT;
-		if(umath::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostCoherent))
+		if(pragma::math::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostCoherent))
 			flags |= GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT;
-		if(umath::is_flag_set(createInfo.flags, util::BufferCreateInfo::Flags::Persistent))
+		if(pragma::math::is_flag_set(createInfo.flags, util::BufferCreateInfo::Flags::Persistent))
 			flags |= GL_MAP_PERSISTENT_BIT;
-		if(umath::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostCached) && umath::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::DeviceLocal) == false)
+		if(pragma::math::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostCached) && pragma::math::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::DeviceLocal) == false)
 			flags |= GL_CLIENT_STORAGE_BIT;
-		if(umath::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostAccessable))
+		if(pragma::math::is_flag_set(createInfo.memoryFeatures, MemoryFeatureFlags::HostAccessable))
 			flags |= GL_MAP_READ_BIT | GL_DYNAMIC_STORAGE_BIT;
 		flags |= GL_DYNAMIC_STORAGE_BIT; // TODO: Only set this flag if we really need it (Let user specify?)
 		glNamedBufferStorage(buf, createInfo.size, data, flags);

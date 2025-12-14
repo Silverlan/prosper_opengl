@@ -48,7 +48,7 @@ static void test_cubemap()
 
 std::shared_ptr<IImage> GLImage::Create(IPrContext &context, const prosper::util::ImageCreateInfo &createInfo, const std::function<const uint8_t *(uint32_t layer, uint32_t mipmap, uint32_t &dataSize, uint32_t &rowSize)> &getImageData)
 {
-	auto isCubemap = umath::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::Cubemap);
+	auto isCubemap = pragma::math::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::Cubemap);
 	auto type = GetImageType(createInfo);
 	GLuint tex;
 	glCreateTextures(type, 1, &tex);
@@ -56,7 +56,7 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context, const prosper::util
 	glBindTexture(type, tex);
 
 	uint32_t mipLevels = 1;
-	if(umath::is_flag_set(createInfo.flags, prosper::util::ImageCreateInfo::Flags::FullMipmapChain))
+	if(pragma::math::is_flag_set(createInfo.flags, prosper::util::ImageCreateInfo::Flags::FullMipmapChain))
 		mipLevels = prosper::util::calculate_mipmap_count(createInfo.width, createInfo.height);
 	GLenum pixelFormat;
 	auto format = prosper::util::to_opengl_image_format(createInfo.format, &pixelFormat);
@@ -69,7 +69,7 @@ std::shared_ptr<IImage> GLImage::Create(IPrContext &context, const prosper::util
 	if(static_cast<GLContext &>(context).CheckResult() == false)
 		return nullptr;
 	if(getImageData) {
-		auto numMipmaps = umath::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::FullMipmapChain) ? util::calculate_mipmap_count(createInfo.width, createInfo.height) : 1u;
+		auto numMipmaps = pragma::math::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::FullMipmapChain) ? util::calculate_mipmap_count(createInfo.width, createInfo.height) : 1u;
 		for(auto iLayer = decltype(createInfo.layers) {0u}; iLayer < createInfo.layers; ++iLayer) {
 			for(auto iMipmap = decltype(numMipmaps) {0u}; iMipmap < numMipmaps; ++iMipmap) {
 				auto w = img->GetWidth(iMipmap);
@@ -114,11 +114,11 @@ bool GLImage::WriteImageData(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uin
 	return static_cast<GLContext &>(GetContext()).CheckResult();
 }
 bool GLImage::IsLayered() const { return IsLayered(GetCreateInfo()); }
-bool GLImage::IsLayered(const prosper::util::ImageCreateInfo &createInfo) { return (createInfo.layers > 1 && umath::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::Cubemap) == false); }
+bool GLImage::IsLayered(const prosper::util::ImageCreateInfo &createInfo) { return (createInfo.layers > 1 && pragma::math::is_flag_set(createInfo.flags, util::ImageCreateInfo::Flags::Cubemap) == false); }
 GLenum GLImage::GetImageType(const prosper::util::ImageCreateInfo &createInfo)
 {
 	GLenum type = GL_TEXTURE_2D;
-	if(umath::is_flag_set(createInfo.flags, prosper::util::ImageCreateInfo::Flags::Cubemap))
+	if(pragma::math::is_flag_set(createInfo.flags, prosper::util::ImageCreateInfo::Flags::Cubemap))
 		type = GL_TEXTURE_CUBE_MAP;
 	else {
 		switch(createInfo.type) {

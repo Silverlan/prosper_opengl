@@ -87,7 +87,7 @@ export namespace prosper {
 
 		struct BoundPipelineData {
 			std::optional<PipelineID> pipelineId {};
-			mutable ::util::WeakHandle<prosper::Shader> shader {};
+			mutable pragma::util::WeakHandle<prosper::Shader> shader {};
 			std::optional<PipelineID> shaderPipelineId {};
 			uint32_t nextActiveTextureIndex = 0;
 			uint32_t numVertexAttribBindings = 0;

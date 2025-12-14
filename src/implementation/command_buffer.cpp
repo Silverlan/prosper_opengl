@@ -20,7 +20,7 @@ namespace prosper {
 		uint32_t GetPipelineIndex() const { return m_pipelineIdx; }
 	  private:
 		using IShaderPipelineLayout::IShaderPipelineLayout;
-		mutable ::util::WeakHandle<prosper::Shader> m_shader {};
+		mutable pragma::util::WeakHandle<prosper::Shader> m_shader {};
 		mutable uint32_t m_pipelineIdx = 0;
 	};
 };
@@ -61,7 +61,7 @@ bool prosper::GLCommandBuffer::RecordBindVertexBuffers(const prosper::ShaderGrap
 	auto &createInfo = static_cast<const prosper::GraphicsPipelineCreateInfo &>(*shader.GetPipelineCreateInfo(pipelineIdx));
 	uint32_t absAttrId;
 	auto result = GetContext().BindVertexBuffers(createInfo, buffers, startBinding, offsets, &absAttrId);
-	m_boundPipelineData.numVertexAttribBindings = umath::max(absAttrId, m_boundPipelineData.numVertexAttribBindings);
+	m_boundPipelineData.numVertexAttribBindings = pragma::math::max(absAttrId, m_boundPipelineData.numVertexAttribBindings);
 	return result;
 }
 bool prosper::GLCommandBuffer::RecordBindRenderBuffer(const IRenderBuffer &renderBuffer)
@@ -175,13 +175,13 @@ bool prosper::GLCommandBuffer::RecordSetStencilCompareMask(StencilFaceFlags face
 {
 	GLint func, ref;
 
-	if(umath::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
+	if(pragma::math::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
 		glGetIntegerv(GL_STENCIL_FUNC, &func);
 		glGetIntegerv(GL_STENCIL_REF, &ref);
 		glStencilFuncSeparate(GL_FRONT, func, ref, stencilCompareMask);
 	}
 
-	if(umath::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
+	if(pragma::math::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
 		glGetIntegerv(GL_STENCIL_BACK_FUNC, &func);
 		glGetIntegerv(GL_STENCIL_BACK_REF, &ref);
 		glStencilFuncSeparate(GL_BACK, func, ref, stencilCompareMask);
@@ -191,13 +191,13 @@ bool prosper::GLCommandBuffer::RecordSetStencilCompareMask(StencilFaceFlags face
 bool prosper::GLCommandBuffer::RecordSetStencilReference(StencilFaceFlags faceMask, uint32_t stencilReference)
 {
 	GLint func, mask;
-	if(umath::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
+	if(pragma::math::is_flag_set(faceMask, StencilFaceFlags::FrontBit)) {
 		glGetIntegerv(GL_STENCIL_FUNC, &func);
 		glGetIntegerv(GL_STENCIL_VALUE_MASK, &mask);
 		glStencilFuncSeparate(GL_FRONT, func, stencilReference, mask);
 	}
 
-	if(umath::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
+	if(pragma::math::is_flag_set(faceMask, StencilFaceFlags::BackBit)) {
 		glGetIntegerv(GL_STENCIL_BACK_FUNC, &func);
 		glGetIntegerv(GL_STENCIL_BACK_VALUE_MASK, &mask);
 		glStencilFuncSeparate(GL_BACK, func, stencilReference, mask);
@@ -206,8 +206,8 @@ bool prosper::GLCommandBuffer::RecordSetStencilReference(StencilFaceFlags faceMa
 }
 bool prosper::GLCommandBuffer::RecordSetStencilWriteMask(StencilFaceFlags faceMask, uint32_t stencilWriteMask)
 {
-	glStencilMaskSeparate(GL_STENCIL_WRITEMASK, umath::is_flag_set(faceMask, StencilFaceFlags::FrontBit) ? stencilWriteMask : 1);
-	glStencilMaskSeparate(GL_STENCIL_BACK_WRITEMASK, umath::is_flag_set(faceMask, StencilFaceFlags::BackBit) ? stencilWriteMask : 1);
+	glStencilMaskSeparate(GL_STENCIL_WRITEMASK, pragma::math::is_flag_set(faceMask, StencilFaceFlags::FrontBit) ? stencilWriteMask : 1);
+	glStencilMaskSeparate(GL_STENCIL_BACK_WRITEMASK, pragma::math::is_flag_set(faceMask, StencilFaceFlags::BackBit) ? stencilWriteMask : 1);
 	return GetContext().CheckResult();
 }
 
@@ -228,7 +228,7 @@ static void clear_image(prosper::GLContext &context, prosper::IImage &img, uint3
 {
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
-	util::ScopeGuard sg {[drawFboId]() {
+	pragma::util::ScopeGuard sg {[drawFboId]() {
 		// Restore previous bound framebuffer
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFboId);
 	}};
@@ -486,8 +486,8 @@ bool prosper::GLCommandBuffer::DoRecordBindShaderPipeline(prosper::Shader &shade
 			glEnable(GL_BLEND);
 			glBlendEquationSeparate(util::to_opengl_enum(blendOpColor), util::to_opengl_enum(blendOpAlpha));
 			glBlendFuncSeparate(util::to_opengl_enum(srcColorBlendFactor), util::to_opengl_enum(dstColorBlendFactor), util::to_opengl_enum(srcAlphaBlendFactor), util::to_opengl_enum(dstAlphaBlendFactor));
-			glColorMask(umath::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::RBit), umath::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::GBit), umath::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::BBit),
-			  umath::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::ABit));
+			glColorMask(pragma::math::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::RBit), pragma::math::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::GBit), pragma::math::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::BBit),
+			  pragma::math::is_flag_set(channelWriteMask, prosper::ColorComponentFlags::ABit));
 		}
 		else
 			glDisable(GL_BLEND);
@@ -833,7 +833,7 @@ bool prosper::GLCommandBuffer::DoRecordBlitImage(const util::BlitInfo &blitInfo,
 		return GetContext().CheckResult();
 	}
 	// These can affect blitting (despite the specifcation not making any mention about it)
-	if(aspectFlags.has_value() && umath::is_flag_set(*aspectFlags, ImageAspectFlags::StencilBit))
+	if(aspectFlags.has_value() && pragma::math::is_flag_set(*aspectFlags, ImageAspectFlags::StencilBit))
 		glEnable(GL_STENCIL_TEST);
 	else
 		glDisable(GL_STENCIL_TEST);
