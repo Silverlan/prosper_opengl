@@ -8,7 +8,7 @@ export import :buffer.buffer;
 export namespace prosper {
 	class PR_EXPORT GLDynamicResizableBuffer : public IDynamicResizableBuffer, virtual public GLBuffer {
 	  public:
-		GLDynamicResizableBuffer(IPrContext &context, IBuffer &buffer, const util::BufferCreateInfo &createInfo, uint64_t maxTotalSize);
+		GLDynamicResizableBuffer(IPrContext &context, IBuffer &buffer, const util::BufferCreateInfo &createInfo);
 	  protected:
 		virtual void MoveInternalBuffer(IBuffer &other) override;
 	};
