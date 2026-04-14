@@ -12,17 +12,19 @@ import :window;
 
 using namespace prosper;
 
-std::shared_ptr<GLWindow> GLWindow::Create(const WindowSettings &windowCreationInfo, prosper::IPrContext &context)
+std::expected<std::shared_ptr<GLWindow>, std::string> GLWindow::Create(const WindowSettings &windowCreationInfo, prosper::IPrContext &context)
 {
 	auto window = std::shared_ptr<GLWindow> {new GLWindow {context, windowCreationInfo}, [](GLWindow *window) {
 		                                         window->Release();
 		                                         delete window;
 	                                         }};
-	window->InitWindow();
+	auto res = window->InitWindow();
+	if(!res)
+		return std::unexpected {res.error()};
 	return window;
 }
 
-void GLWindow::InitWindow(bool keepContext)
+std::expected<void, std::string> GLWindow::InitWindow(bool keepContext)
 {
 	if(!keepContext)
 		m_glfwWindow = {};
@@ -40,15 +42,11 @@ void GLWindow::InitWindow(bool keepContext)
 		// just try to re-initialize it with the new settings.
 		m_glfwWindow->Reinitialize(settings);
 	}
-	else
-		m_glfwWindow = pragma::platform::Window::Create(settings); // TODO: Release
-
-	const char *errDesc;
-	auto err = glfwGetError(&errDesc);
-	if(err != GLFW_NO_ERROR) {
-		std::cout << "Error retrieving GLFW window handle: " << errDesc << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-		exit(EXIT_FAILURE);
+	else {
+		auto res = pragma::platform::Window::Create(settings);
+		if(!res)
+			return std::unexpected {res.error()};
+		m_glfwWindow = std::move(res.value());
 	}
 
 	// GLFW does not guarantee to actually use the size which was specified,
@@ -63,8 +61,9 @@ void GLWindow::InitWindow(bool keepContext)
 	glfwMakeContextCurrent(const_cast<GLFWwindow *>(m_glfwWindow->GetGLFWWindow()));
 
 	OnWindowInitialized();
+	return {};
 }
-void GLWindow::InitWindow() { InitWindow(false); }
+std::expected<void, std::string> GLWindow::InitWindow() { return InitWindow(false); }
 void GLWindow::ReleaseWindow()
 {
 	ReleaseSwapchain();
@@ -104,11 +103,13 @@ void GLWindow::DoReleaseSwapchain()
 	m_swapchainFramebuffers.clear();
 }
 
-void GLWindow::DoReloadWindow()
+std::expected<void, std::string> GLWindow::DoReloadWindow()
 {
 	ReleaseSwapchain();
-	InitWindow(true);
+	if(auto res = InitWindow(true); !res)
+		return res;
 	ReloadSwapchain();
+	return {};
 }
 
 void GLWindow::InitCommandBuffers()

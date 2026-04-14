@@ -26,12 +26,12 @@ export namespace prosper {
 		virtual std::string GetAPIIdentifier() const override { return "OpenGL"; }
 		virtual std::string GetAPIAbbreviation() const override { return "GL"; }
 		virtual bool WaitForCurrentSwapchainCommandBuffer(std::string &outErrMsg) override;
-		virtual std::shared_ptr<Window> CreateWindow(const WindowSettings &windowCreationInfo) override;
+		virtual std::expected<std::shared_ptr<Window>, std::string> CreateWindow(const WindowSettings &windowCreationInfo) override;
 
 		virtual prosper::FeatureSupport AreFormatFeaturesSupported(Format format, FormatFeatureFlags featureFlags, std::optional<ImageTiling> tiling) const override;
 		virtual void BakeShaderPipeline(prosper::PipelineID pipelineId, prosper::PipelineBindPoint pipelineType) override;
 
-		virtual void ReloadWindow() override;
+		virtual std::expected<void, std::string> ReloadWindow() override;
 		prosper::IFramebuffer *GetSwapchainFramebuffer(uint32_t idx);
 
 		//bool BuildShader(prosper::ShaderStage stage,const std::string &glslCode);
@@ -93,7 +93,7 @@ export namespace prosper {
 
 		virtual void DrawFrame(const std::function<void()> &drawFrame) override;
 		virtual bool Submit(ICommandBuffer &cmdBuf, bool shouldBlock = false, IFence *optFence = nullptr) override;
-		virtual void Initialize(const CreateInfo &createInfo) override;
+		virtual std::expected<void, std::string> Initialize(const CreateInfo &createInfo) override;
 
 		ShaderBlit *GetBlitShader() const;
 		ShaderFlipImage *GetFlipShader() const;
@@ -123,7 +123,7 @@ export namespace prosper {
 		virtual void DoFlushCommandBuffer(ICommandBuffer &cmd) override;
 		virtual void ReloadSwapchain() override;
 
-		virtual void InitAPI(const CreateInfo &createInfo) override;
+		virtual std::expected<void, std::string> InitAPI(const CreateInfo &createInfo) override;
 		void InitPushConstantBuffer();
 		void InitShaderPipeline(prosper::Shader &shader, PipelineID pipelineId, PipelineID shaderPipelineId);
 	  private:

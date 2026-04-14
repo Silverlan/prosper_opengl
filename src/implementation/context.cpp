@@ -228,13 +228,14 @@ static std::string error_to_string(GLenum err)
 	}
 }
 
-std::shared_ptr<prosper::Window> prosper::GLContext::CreateWindow(const WindowSettings &windowCreationInfo)
+std::expected<std::shared_ptr<prosper::Window>, std::string> prosper::GLContext::CreateWindow(const WindowSettings &windowCreationInfo)
 {
 	if(m_window)
-		return nullptr; // Only one window supported
-	auto window = GLWindow::Create(windowCreationInfo, *this);
-	if(!window)
-		return nullptr;
+		return std::unexpected {"Only one window supported"};
+	auto res = GLWindow::Create(windowCreationInfo, *this);
+	if(!res)
+		return std::unexpected {res.error()};
+	auto &window = res.value();
 	window->ReloadSwapchain();
 	m_windows.push_back(window);
 	return window;
@@ -255,8 +256,7 @@ bool prosper::GLContext::CheckResult()
 	return false;
 }
 
-void prosper::GLContext::ReloadWindow()
-{
+std::expected<void, std::string> prosper::GLContext::ReloadWindow() {
 	WaitIdle();
 
 	auto &glWindow = static_cast<GLWindow &>(*m_window);
@@ -282,6 +282,7 @@ void prosper::GLContext::ReloadWindow()
 		static_cast<GLFramebuffer &>(*fb).UpateSize(w, h);
 
 	OnResolutionChanged(w, h);
+	return {};
 }
 
 prosper::IFramebuffer *prosper::GLContext::GetSwapchainFramebuffer(uint32_t idx) { return (idx < m_swapchainFramebuffers.size()) ? m_swapchainFramebuffers.at(idx).get() : nullptr; }
@@ -652,10 +653,13 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf, bool shouldBlock, IFence
 {
 	return false; // TODO
 }
-void prosper::GLContext::Initialize(const CreateInfo &createInfo)
+std::expected<void, std::string> prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
-	IPrContext::Initialize(createInfo);
+	auto res = IPrContext::Initialize(createInfo);
+	if(!res)
+		return std::unexpected {res.error()};
 	m_hShaderFlip = m_shaderManager->GetShader("flip_image");
+	return {};
 }
 
 prosper::ShaderBlit *prosper::GLContext::GetBlitShader() const { return static_cast<prosper::ShaderBlit *>(m_hShaderBlit.get()); }
@@ -681,17 +685,16 @@ void prosper::GLContext::ReloadSwapchain()
 	OnSwapchainInitialized();
 }
 
-void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
+std::expected<void, std::string> prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 {
-	InitWindow();
+	auto res = InitWindow();
+	if(!res)
+		return std::unexpected {res.error()};
 	//GetWindow().InitCommandBuffers();
 	//GetWindow().InitSwapchain();
 
-	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-		exit(EXIT_FAILURE);
-	}
+	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+		return std::unexpected {"Failed to initialize GLAD"};
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -753,6 +756,7 @@ void prosper::GLContext::InitAPI(const CreateInfo &createInfo)
 	InitTemporaryBuffer();
 	ReloadSwapchain();
 	CheckResult();
+	return {};
 }
 
 void prosper::GLContext::InitPushConstantBuffer()
