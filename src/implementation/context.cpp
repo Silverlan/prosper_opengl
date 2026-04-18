@@ -224,7 +224,7 @@ static std::string error_to_string(GLenum err)
 	case GL_CONTEXT_LOST:
 		return "GL_CONTEXT_LOST";
 	default:
-		return std::to_string(err);
+		return pragma::util::to_string(err);
 	}
 }
 
@@ -292,7 +292,7 @@ prosper::IFramebuffer *prosper::GLContext::GetSwapchainFramebuffer(uint32_t idx)
 void prosper::GLWindow::InitCommandBuffers()
 {
 	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(*this,prosper::QueueFamilyType::Universal);
-	cmdBuffer->SetDebugName("swapchain_cmd" +std::to_string(0));
+	cmdBuffer->SetDebugName("swapchain_cmd" +pragma::util::to_string(0));
 	m_commandBuffers = {cmdBuffer,cmdBuffer};
 }
 */

@@ -356,7 +356,7 @@ bool prosper::GLCommandBuffer::RecordBindDescriptorSets(PipelineBindPoint bindPo
 					std::optional<uint32_t> layer {};
 					auto *tex = ds->GetBoundTexture(j, &layer);
 					if(layer.has_value() && GetContext().IsValidationEnabled())
-						GetContext().ValidationCallback(DebugMessageSeverityFlags::WarningBit, "Attempted to bind layer " + std::to_string(*layer) + " of texture '" + tex->GetDebugName() + "'! This is not allowed in OpenGL!");
+						GetContext().ValidationCallback(DebugMessageSeverityFlags::WarningBit, "Attempted to bind layer " + pragma::util::to_string(*layer) + " of texture '" + tex->GetDebugName() + "'! This is not allowed in OpenGL!");
 					uint32_t activeTextureSlot = *bindingPoint;
 					glBindTextureUnit(activeTextureSlot, tex ? static_cast<GLImage &>(tex->GetImage()).GetGLImage() : 0);
 					auto *sampler = tex ? tex->GetSampler() : nullptr;

@@ -29,7 +29,7 @@ bool prosper::util::convert_glsl_set_bindings_to_opengl_binding_points(std::vect
 	uint32_t imageBindingPointIdx = 0;  // Image binding points are independent of buffers in OpenGL
 	for(auto &dsInfo : descSetInfos) {
 		if(dsInfo.has_value() == false) {
-			outErrMsg = "DescriptorSet " + std::to_string(descSetIdx) + " is undefined!";
+			outErrMsg = "DescriptorSet " + pragma::util::to_string(descSetIdx) + " is undefined!";
 			return false;
 		}
 		for(auto &bp : dsInfo->bindingPoints) {
@@ -57,7 +57,7 @@ bool prosper::util::convert_glsl_set_bindings_to_opengl_binding_points(std::vect
 			auto strStart = loc.macroStart;
 			auto strEnd = loc.macroEnd;
 			auto oldLen = newGlslShader.length();
-			newGlslShader = newGlslShader.substr(0, strStart + offset) + "binding = " + std::to_string(descSetInfos.at(loc.setIndexIndex)->bindingPoints.at(loc.bindingIndexIndex).bindingPoint) + newGlslShader.substr(strEnd + offset);
+			newGlslShader = newGlslShader.substr(0, strStart + offset) + "binding = " + pragma::util::to_string(descSetInfos.at(loc.setIndexIndex)->bindingPoints.at(loc.bindingIndexIndex).bindingPoint) + newGlslShader.substr(strEnd + offset);
 			offset += (newGlslShader.length() - oldLen);
 		}
 	}

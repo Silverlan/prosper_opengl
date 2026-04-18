@@ -69,7 +69,7 @@ bool GLBuffer::DoMap(Offset offset, Size size, MapFlags mapFlags, void **optOutM
 			GLint createAccessFlags = 0;
 			glGetNamedBufferParameteriv(m_buffer, GL_BUFFER_STORAGE_FLAGS, &createAccessFlags);
 			if((access & createAccessFlags) != access)
-				GetContext().ValidationCallback(prosper::DebugMessageSeverityFlags::WarningBit, "Buffer mapping requested access flags " + std::to_string(access) + ", which is not compatible with access flags " + std::to_string(createAccessFlags) + " that the buffer was created with!");
+				GetContext().ValidationCallback(prosper::DebugMessageSeverityFlags::WarningBit, "Buffer mapping requested access flags " + pragma::util::to_string(access) + ", which is not compatible with access flags " + pragma::util::to_string(createAccessFlags) + " that the buffer was created with!");
 
 			GLint64 size = 0;
 			glGetNamedBufferParameteri64v(m_buffer, GL_BUFFER_SIZE, &size);
@@ -128,7 +128,7 @@ bool GLBuffer::ValidateBufferRange(DeviceSize offset, DeviceSize size) const
 	if(context.CheckResult() == false)
 		return false;
 	if(offset + size > bufSize) {
-		context.ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit, "Attempted to access buffer range [" + std::to_string(offset) + "," + std::to_string(offset + size) + "], which exceeds buffer size of " + std::to_string(bufSize));
+		context.ValidationCallback(prosper::DebugMessageSeverityFlags::ErrorBit, "Attempted to access buffer range [" + pragma::util::to_string(offset) + "," + pragma::util::to_string(offset + size) + "], which exceeds buffer size of " + pragma::util::to_string(bufSize));
 		return false;
 	}
 	return true;

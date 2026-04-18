@@ -115,6 +115,6 @@ std::expected<void, std::string> GLWindow::DoReloadWindow()
 void GLWindow::InitCommandBuffers()
 {
 	auto cmdBuffer = prosper::GLPrimaryCommandBuffer::Create(this->GetContext(), prosper::QueueFamilyType::Universal);
-	cmdBuffer->SetDebugName("swapchain_cmd" + std::to_string(0));
+	cmdBuffer->SetDebugName("swapchain_cmd" + pragma::util::to_string(0));
 	m_commandBuffers = {cmdBuffer, cmdBuffer};
 }
