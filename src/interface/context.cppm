@@ -102,7 +102,6 @@ export namespace prosper {
 		virtual std::shared_ptr<IFence> CreateFence(bool createSignalled = false) override;
 		virtual std::shared_ptr<ISampler> CreateSampler(const util::SamplerCreateInfo &createInfo) override;
 		virtual std::shared_ptr<IRenderPass> CreateRenderPass(const util::RenderPassCreateInfo &renderPassInfo) override;
-		virtual std::shared_ptr<IDescriptorSetGroup> CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) override;
 		virtual std::shared_ptr<ISwapCommandBufferGroup> CreateSwapCommandBufferGroup(Window &window, bool allowMt = true, const std::string &debugName = {}) override;
 		virtual std::shared_ptr<IFramebuffer> CreateFramebuffer(uint32_t width, uint32_t height, uint32_t layers, const std::vector<prosper::IImageView *> &attachments) override;
 		virtual std::unique_ptr<IShaderPipelineLayout> GetShaderPipelineLayout(const Shader &shader, uint32_t pipelineIdx = 0u) const override;
@@ -117,6 +116,7 @@ export namespace prosper {
 	  protected:
 		GLContext(const std::string &appName, bool bEnableValidation = false);
 		virtual std::shared_ptr<IUniformResizableBuffer> DoCreateUniformResizableBuffer(const util::BufferCreateInfo &createInfo, uint64_t bufferInstanceSize, const void *data, prosper::DeviceSize bufferBaseSize, uint32_t alignment) override;
+		std::shared_ptr<IDescriptorSetGroup> DoCreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo, size_t numDescSetGroups) override;
 		virtual std::shared_ptr<IImageView> DoCreateImageView(const util::ImageViewCreateInfo &createInfo, IImage &img, Format format, ImageViewType imgViewType, prosper::ImageAspectFlags aspectMask, uint32_t numLayers) override;
 		virtual void DoKeepResourceAliveUntilPresentationComplete(const std::shared_ptr<void> &resource) override;
 		virtual void DoWaitIdle() override;

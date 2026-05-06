@@ -9,7 +9,8 @@ export namespace prosper {
 	class PR_EXPORT GLDescriptorSetGroup : public IDescriptorSetGroup {
 	  public:
 		static std::shared_ptr<GLDescriptorSetGroup> Create(IPrContext &context, const DescriptorSetCreateInfo &createInfo);
-		virtual ~GLDescriptorSetGroup() override;
+		~GLDescriptorSetGroup() override;
+		uint32_t GetDescriptorSetCount() const override { return 1; }
 	  protected:
 		GLDescriptorSetGroup(IPrContext &context, const DescriptorSetCreateInfo &createInfo);
 	};

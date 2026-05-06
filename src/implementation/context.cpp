@@ -655,7 +655,9 @@ bool prosper::GLContext::Submit(ICommandBuffer &cmdBuf, bool shouldBlock, IFence
 }
 std::expected<void, std::string> prosper::GLContext::Initialize(const CreateInfo &createInfo)
 {
-	auto res = IPrContext::Initialize(createInfo);
+	auto cpy = createInfo;
+	cpy.maxNumberOfFramesInFlight = 1;
+	auto res = IPrContext::Initialize(cpy);
 	if(!res)
 		return std::unexpected {res.error()};
 	m_hShaderFlip = m_shaderManager->GetShader("flip_image");
@@ -845,7 +847,7 @@ std::shared_ptr<prosper::IImage> prosper::GLContext::CreateImage(const util::Ima
 	return GLImage::Create(*this, createInfo, getImageData);
 }
 std::shared_ptr<prosper::IRenderPass> prosper::GLContext::CreateRenderPass(const prosper::util::RenderPassCreateInfo &renderPassInfo) { return GLRenderPass::Create(*this, renderPassInfo); }
-std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::CreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo) { return GLDescriptorSetGroup::Create(*this, descSetInfo); }
+std::shared_ptr<prosper::IDescriptorSetGroup> prosper::GLContext::DoCreateDescriptorSetGroup(DescriptorSetCreateInfo &descSetInfo, size_t numDescSetGroups) { return GLDescriptorSetGroup::Create(*this, descSetInfo); }
 std::shared_ptr<prosper::ISwapCommandBufferGroup> prosper::GLContext::CreateSwapCommandBufferGroup(Window &window, bool allowMt, const std::string &debugName)
 {
 	// OpenGL does not support multi-threaded rendering
