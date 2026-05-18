@@ -60,6 +60,7 @@ export namespace prosper {
 
 		virtual std::shared_ptr<IBuffer> CreateBuffer(const util::BufferCreateInfo &createInfo, const void *data = nullptr) override;
 		virtual std::shared_ptr<IDynamicResizableBuffer> CreateDynamicResizableBuffer(util::BufferCreateInfo createInfo, const void *data = nullptr) override;
+		virtual std::shared_ptr<IResizableBuffer> CreateResizableBuffer(util::BufferCreateInfo createInfo, const void *data = nullptr) override;
 		virtual std::shared_ptr<IImage> CreateImage(const util::ImageCreateInfo &createInfo, const std::function<const uint8_t *(uint32_t layer, uint32_t mipmap, uint32_t &dataSize, uint32_t &rowSize)> &getImageData = nullptr) override;
 
 		virtual void Flush() override;

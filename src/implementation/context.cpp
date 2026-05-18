@@ -824,6 +824,7 @@ std::shared_ptr<prosper::IDynamicResizableBuffer> prosper::GLContext::CreateDyna
 	if(buf == nullptr)
 		return nullptr;
 	auto r = std::shared_ptr<GLDynamicResizableBuffer>(new GLDynamicResizableBuffer {*this, *buf, createInfo});
+	r->SetDebugName(std::format("drb_{}", createInfo.debugName));
 	r->Initialize();
 	return r;
 }

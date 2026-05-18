@@ -12,10 +12,12 @@ export import pragma.prosper;
 export namespace prosper {
 	class GLDynamicResizableBuffer;
 	class GLUniformResizableBuffer;
+	class GLResizableBuffer;
 	class PR_EXPORT GLBuffer : virtual public prosper::IBuffer {
 	  public:
 		friend GLDynamicResizableBuffer;
 		friend GLUniformResizableBuffer;
+		friend GLResizableBuffer;
 		static std::shared_ptr<IBuffer> Create(IPrContext &context, const util::BufferCreateInfo &bufCreateInfo, DeviceSize startOffset, GLuint bufIdx, const std::function<void(IBuffer &)> &onDestroyedCallback = nullptr);
 
 		virtual ~GLBuffer() override;
