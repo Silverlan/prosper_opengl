@@ -11,5 +11,6 @@ export namespace prosper {
 		GLResizableBuffer(IBuffer &buffer);
 	  protected:
 		virtual void MoveInternalBuffer(IBuffer &other) override;
+		void ReleaseBufferSafely() override {}
 	};
 };

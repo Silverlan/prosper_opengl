@@ -828,6 +828,16 @@ std::shared_ptr<prosper::IDynamicResizableBuffer> prosper::GLContext::CreateDyna
 	r->Initialize();
 	return r;
 }
+std::shared_ptr<prosper::IResizableBuffer> prosper::GLContext::CreateResizableBuffer(util::BufferCreateInfo createInfo, const void *data)
+{
+	auto buf = CreateBuffer(createInfo, data);
+	if(buf == nullptr)
+		return nullptr;
+	auto r = std::shared_ptr<GLResizableBuffer>(new GLResizableBuffer {*buf});
+	r->SetDebugName(std::format("rb_{}", createInfo.debugName));
+	r->Initialize();
+	return r;
+}
 std::shared_ptr<prosper::IEvent> prosper::GLContext::CreateEvent() { return GLEvent::Create(*this); }
 std::shared_ptr<prosper::IFence> prosper::GLContext::CreateFence(bool createSignalled) { return GLFence::Create(*this); }
 std::shared_ptr<prosper::ISampler> prosper::GLContext::CreateSampler(const prosper::util::SamplerCreateInfo &createInfo)
